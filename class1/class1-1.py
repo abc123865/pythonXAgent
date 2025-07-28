@@ -119,3 +119,11 @@ print(bool(1))  # 將整數轉為布林值, 印出True
 # Convert integer to boolean, prints True
 print(bool(0))  # 將整數轉為布林值, 印出False
 # Convert integer to boolean, prints False
+
+print("輸入開始")  # 開始輸入 (Start input)
+# input() 函數用來取得使用者輸入
+# The input() function is used to get user input
+a = input("請輸入數字: ")  # 提示使用者輸入內容 (Prompt the user to enter something)
+print(int(a) + 10)  # 顯示使用者輸入的內容 (Display the content entered by the user)
+print(type(a))  # 證明透過input()取得的內容是字串
+# Prove that the content obtained through input() is a string
