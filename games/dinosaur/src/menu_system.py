@@ -122,7 +122,7 @@ class MenuSystem:
     def _draw_menu_options(self, screen):
         """繪製選單選項"""
         start_y = int(self.screen_height * 0.25)
-        option_spacing = int(self.screen_height * 0.12)
+        option_spacing = int(self.screen_height * 0.15)  # 增加間距從 0.12 到 0.15
         selection_width = min(400, int(self.screen_width * 0.5))
 
         for i, option in enumerate(self.menu_options):
@@ -133,9 +133,9 @@ class MenuSystem:
                 # 選中背景
                 selection_rect = pygame.Rect(
                     self.screen_width // 2 - selection_width // 2,
-                    y_pos - int(option_spacing * 0.3),
+                    y_pos - int(option_spacing * 0.35),  # 增加背景高度
                     selection_width,
-                    int(option_spacing * 0.6),
+                    int(option_spacing * 0.7),  # 增加背景高度
                 )
                 pygame.draw.rect(screen, self.colors["BLUE"], selection_rect)
                 pygame.draw.rect(screen, self.colors["YELLOW"], selection_rect, 3)
@@ -164,7 +164,7 @@ class MenuSystem:
             desc_surface = self.fonts["small"].render(
                 option["description"], True, desc_color
             )
-            desc_y = y_pos + int(option_spacing * 0.25)
+            desc_y = y_pos + int(option_spacing * 0.3)  # 調整描述位置
             desc_rect = desc_surface.get_rect(center=(self.screen_width // 2, desc_y))
             screen.blit(desc_surface, desc_rect)
 

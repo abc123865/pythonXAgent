@@ -390,9 +390,17 @@ class Game:
         dino_rect = self.dinosaur.get_collision_rect()
 
         for obstacle in self.obstacle_manager.obstacles[:]:
-            obstacle_rect = obstacle.get_collision_rect()
+            obstacle_rects = obstacle.get_collision_rect()
 
-            if dino_rect.colliderect(obstacle_rect):
+            # 處理單一矩形或多個矩形的情況
+            if isinstance(obstacle_rects, list):
+                collision_detected = any(
+                    dino_rect.colliderect(rect) for rect in obstacle_rects
+                )
+            else:
+                collision_detected = dino_rect.colliderect(obstacle_rects)
+
+            if collision_detected:
                 # 檢查特殊情況
                 if obstacle.can_walk_through():
                     self.combo_count += 1
