@@ -10,58 +10,67 @@ import sys
 import random
 import os
 from config.game_config import (
-    DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT, FPS, FULLSCREEN_MODE, 
-    WINDOW_MODE, GameState, Difficulty, DIFFICULTY_SETTINGS,
-    get_color_palette, FONT_PATH
+    DEFAULT_SCREEN_WIDTH,
+    DEFAULT_SCREEN_HEIGHT,
+    FPS,
+    FULLSCREEN_MODE,
+    WINDOW_MODE,
+    GameState,
+    Difficulty,
+    DIFFICULTY_SETTINGS,
+    get_color_palette,
+    FONT_PATH,
 )
 from dinosaur import Dinosaur
 from obstacles import ObstacleManager
 from menu_system import MenuSystem
 
+
 class Game:
     """主遊戲類別"""
-    
+
     def __init__(self):
         """初始化遊戲"""
         # 初始化 pygame
         pygame.init()
-        
+
         # 螢幕設定
         self.fullscreen_mode = FULLSCREEN_MODE
         self.screen_width = DEFAULT_SCREEN_WIDTH
         self.screen_height = DEFAULT_SCREEN_HEIGHT
         self.ground_height = int(self.screen_height * 0.875)
-        
+
         # 設定顯示模式
         self.setup_display()
         pygame.display.set_caption("🦕 超級進階小恐龍遊戲 - 重構版本")
         self.clock = pygame.time.Clock()
-        
+
         # 遊戲狀態
         self.game_state = GameState.MENU
         self.selected_difficulty = Difficulty.EASY
-        
+
         # 載入顏色調色板
         self.colors = get_color_palette()
-        
+
         # 字體設定
         self.setup_fonts()
-        
+
         # 主選單系統
         self.menu_system = MenuSystem(
-            self.screen_width, self.screen_height,
+            self.screen_width,
+            self.screen_height,
             {
                 "large": self.font_large,
                 "medium": self.font_medium,
                 "small": self.font_small,
-            }
+            },
         )
-        
+
         # 遊戲物件
         self.dinosaur = None
         self.obstacle_manager = None
         self.clouds = []
-        
+
         # 遊戲狀態
         self.score = 0
         self.high_score = 0
@@ -71,11 +80,11 @@ class Game:
         self.speed_increase_timer = 0
         self.obstacle_spawn_rate = 1.0
         self.speed_increase_rate = 0.1
-        
+
         # 遊戲效果
         self.combo_count = 0
         self.screen_shake = 0
-        
+
         print("🎮 遊戲引擎初始化完成")
 
     def setup_display(self):
@@ -95,7 +104,7 @@ class Game:
                 (self.screen_width, self.screen_height), WINDOW_MODE
             )
             print(f"🪟 視窗模式: {self.screen_width}x{self.screen_height}")
-        
+
         # 更新地面高度
         self.ground_height = int(self.screen_height * 0.875)
 
@@ -109,7 +118,7 @@ class Game:
         large_size = int(36 * scale_factor)
         medium_size = int(24 * scale_factor)
         small_size = int(18 * scale_factor)
-        
+
         # 嘗試載入微軟正黑體
         try:
             self.font_large = pygame.font.Font(FONT_PATH, large_size)
@@ -143,13 +152,13 @@ class Game:
                 (self.screen_width, self.screen_height), WINDOW_MODE
             )
             print(f"🪟 切換到視窗模式: {self.screen_width}x{self.screen_height}")
-        
+
         # 更新相關設定
         self.ground_height = int(self.screen_height * 0.875)
-        
+
         # 更新選單系統
         self.menu_system.update_screen_size(self.screen_width, self.screen_height)
-        
+
         # 重新設定字體
         self.setup_fonts()
         self.menu_system.fonts = {
@@ -157,7 +166,7 @@ class Game:
             "medium": self.font_medium,
             "small": self.font_small,
         }
-        
+
         # 重新設定恐龍位置
         if self.dinosaur:
             self.dinosaur.screen_width = self.screen_width
@@ -168,20 +177,22 @@ class Game:
     def start_game(self, difficulty):
         """
         根據選擇的難度開始遊戲
-        
+
         Args:
             difficulty (int): 難度等級
         """
         self.selected_difficulty = difficulty
         self.game_state = GameState.PLAYING
-        
+
         # 重新初始化遊戲物件
-        self.dinosaur = Dinosaur(self.screen_width, self.screen_height, self.ground_height)
+        self.dinosaur = Dinosaur(
+            self.screen_width, self.screen_height, self.ground_height
+        )
         self.obstacle_manager = ObstacleManager(
             self.screen_width, self.screen_height, self.ground_height
         )
         self.clouds = []
-        
+
         # 重置遊戲狀態
         self.score = 0
         self.game_over = False
@@ -189,13 +200,13 @@ class Game:
         self.combo_count = 0
         self.screen_shake = 0
         self.speed_increase_timer = 0
-        
+
         # 根據難度設定遊戲參數
         settings = DIFFICULTY_SETTINGS[difficulty]
         self.game_speed = settings["game_speed"]
         self.obstacle_spawn_rate = settings["obstacle_spawn_rate"]
         self.speed_increase_rate = settings["speed_increase_rate"]
-        
+
         print(f"🚀 遊戲開始！難度等級: {settings['name']}")
 
     def return_to_menu(self):
@@ -214,8 +225,8 @@ class Game:
                 if event.key == pygame.K_F11:
                     self.toggle_fullscreen()
                 elif event.key == pygame.K_F4 and (
-                    pygame.key.get_pressed()[pygame.K_LALT] or 
-                    pygame.key.get_pressed()[pygame.K_RALT]
+                    pygame.key.get_pressed()[pygame.K_LALT]
+                    or pygame.key.get_pressed()[pygame.K_RALT]
                 ):
                     return False
 
@@ -227,10 +238,12 @@ class Game:
                     (self.screen_width, self.screen_height), WINDOW_MODE
                 )
                 self.ground_height = int(self.screen_height * 0.875)
-                
+
                 # 更新選單系統
-                self.menu_system.update_screen_size(self.screen_width, self.screen_height)
-                
+                self.menu_system.update_screen_size(
+                    self.screen_width, self.screen_height
+                )
+
                 # 重新設定字體
                 self.setup_fonts()
                 self.menu_system.fonts = {
@@ -254,8 +267,10 @@ class Game:
                         self.return_to_menu()
                     elif event.key == pygame.K_SPACE or event.key == pygame.K_UP:
                         if not self.game_over:
-                            if (hasattr(self.dinosaur, "is_control_inverted") and 
-                                self.dinosaur.is_control_inverted):
+                            if (
+                                hasattr(self.dinosaur, "is_control_inverted")
+                                and self.dinosaur.is_control_inverted
+                            ):
                                 self.dinosaur.duck()
                             else:
                                 self.dinosaur.jump()
@@ -263,8 +278,10 @@ class Game:
                             self.start_game(self.selected_difficulty)
                     elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         if not self.game_over:
-                            if (hasattr(self.dinosaur, "is_control_inverted") and 
-                                self.dinosaur.is_control_inverted):
+                            if (
+                                hasattr(self.dinosaur, "is_control_inverted")
+                                and self.dinosaur.is_control_inverted
+                            ):
                                 self.dinosaur.jump()
                             else:
                                 self.dinosaur.duck()
@@ -274,12 +291,14 @@ class Game:
                     elif event.key == pygame.K_z:
                         if not self.game_over:
                             self.dinosaur.activate_shield()
-                            
+
                 elif event.type == pygame.KEYUP:
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         if not self.game_over:
-                            if not (hasattr(self.dinosaur, "is_control_inverted") and 
-                                   self.dinosaur.is_control_inverted):
+                            if not (
+                                hasattr(self.dinosaur, "is_control_inverted")
+                                and self.dinosaur.is_control_inverted
+                            ):
                                 self.dinosaur.stand_up()
         return True
 
@@ -287,7 +306,7 @@ class Game:
         """更新遊戲邏輯"""
         if self.game_state == GameState.MENU:
             self.menu_system.update()
-            
+
         elif self.game_state == GameState.PLAYING:
             if not self.game_over:
                 # 噩夢模式的特殊效果
@@ -306,10 +325,14 @@ class Game:
                     print(f"🚀 遊戲速度提升！當前速度: {self.game_speed:.1f}")
 
                 # 更新障礙物
-                is_gravity_reversed = (hasattr(self.dinosaur, "is_gravity_reversed") and 
-                                     self.dinosaur.is_gravity_reversed)
+                is_gravity_reversed = (
+                    hasattr(self.dinosaur, "is_gravity_reversed")
+                    and self.dinosaur.is_gravity_reversed
+                )
                 self.obstacle_manager.spawn_obstacle(
-                    self.selected_difficulty, self.obstacle_spawn_rate, is_gravity_reversed
+                    self.selected_difficulty,
+                    self.obstacle_spawn_rate,
+                    is_gravity_reversed,
                 )
                 self.obstacle_manager.update(self.game_speed)
 
@@ -339,7 +362,9 @@ class Game:
 
         # 重力異常
         if random.randint(1, 600) == 1:
-            self.dinosaur.apply_nightmare_effect("gravity_reversal", random.randint(180, 300))
+            self.dinosaur.apply_nightmare_effect(
+                "gravity_reversal", random.randint(180, 300)
+            )
             print("⚠️ 重力異常發生！")
 
     def spawn_cloud(self):
@@ -361,7 +386,7 @@ class Game:
         """檢查碰撞"""
         if not self.dinosaur or not self.obstacle_manager:
             return False
-            
+
         dino_rect = self.dinosaur.get_collision_rect()
 
         for obstacle in self.obstacle_manager.obstacles[:]:
@@ -401,15 +426,14 @@ class Game:
                     # 重置連擊
                     self.combo_count = 0
                     return True
-                    
+
         # 移除超出螢幕的障礙物並計分
         initial_count = len(self.obstacle_manager.obstacles)
         self.obstacle_manager.obstacles = [
-            obs for obs in self.obstacle_manager.obstacles 
-            if obs.x + obs.width >= 0
+            obs for obs in self.obstacle_manager.obstacles if obs.x + obs.width >= 0
         ]
         removed_count = initial_count - len(self.obstacle_manager.obstacles)
-        
+
         if removed_count > 0:
             score_multiplier = {
                 Difficulty.EASY: 1,
@@ -417,21 +441,29 @@ class Game:
                 Difficulty.HARD: 2,
                 Difficulty.NIGHTMARE: 4,
             }
-            self.score += int(10 * removed_count * score_multiplier.get(self.selected_difficulty, 1))
-            
+            self.score += int(
+                10 * removed_count * score_multiplier.get(self.selected_difficulty, 1)
+            )
+
         return False
 
     def draw(self):
         """繪製遊戲畫面"""
         if self.game_state == GameState.MENU:
             self.menu_system.draw(self.screen)
-            
+
         elif self.game_state == GameState.PLAYING:
             # 螢幕震動效果
-            screen_offset_x = (random.randint(-self.screen_shake, self.screen_shake) 
-                             if self.screen_shake > 0 else 0)
-            screen_offset_y = (random.randint(-self.screen_shake, self.screen_shake) 
-                             if self.screen_shake > 0 else 0)
+            screen_offset_x = (
+                random.randint(-self.screen_shake, self.screen_shake)
+                if self.screen_shake > 0
+                else 0
+            )
+            screen_offset_y = (
+                random.randint(-self.screen_shake, self.screen_shake)
+                if self.screen_shake > 0
+                else 0
+            )
 
             # 根據難度調整背景色
             bg_colors = {
@@ -445,10 +477,14 @@ class Game:
 
             # 畫地面
             pygame.draw.line(
-                self.screen, self.colors["BLACK"],
+                self.screen,
+                self.colors["BLACK"],
                 (screen_offset_x, self.ground_height + screen_offset_y),
-                (self.screen_width + screen_offset_x, self.ground_height + screen_offset_y),
-                2
+                (
+                    self.screen_width + screen_offset_x,
+                    self.ground_height + screen_offset_y,
+                ),
+                2,
             )
 
             # 畫雲朵
@@ -490,7 +526,9 @@ class Game:
         # 最高分顯示
         if self.high_score > 0:
             high_score_text = f"最高分: {self.high_score}"
-            high_score_surface = self.font_small.render(high_score_text, True, self.colors["PURPLE"])
+            high_score_surface = self.font_small.render(
+                high_score_text, True, self.colors["PURPLE"]
+            )
             self.screen.blit(high_score_surface, (margin, margin + line_height))
 
         # 遊戲速度顯示
@@ -505,46 +543,74 @@ class Game:
             Difficulty.HARD: "困難",
             Difficulty.NIGHTMARE: "噩夢",
         }
-        difficulty_text = f"難度: {difficulty_names.get(self.selected_difficulty, '未知')}"
-        difficulty_surface = self.font_small.render(difficulty_text, True, self.colors["PURPLE"])
+        difficulty_text = (
+            f"難度: {difficulty_names.get(self.selected_difficulty, '未知')}"
+        )
+        difficulty_surface = self.font_small.render(
+            difficulty_text, True, self.colors["PURPLE"]
+        )
         self.screen.blit(difficulty_surface, (margin, margin + line_height * 3))
 
         # 連擊數顯示
         current_line = 4
         if self.combo_count > 0:
             combo_text = f"連擊: {self.combo_count}"
-            combo_surface = self.font_small.render(combo_text, True, self.colors["ORANGE"])
-            self.screen.blit(combo_surface, (margin, margin + line_height * current_line))
+            combo_surface = self.font_small.render(
+                combo_text, True, self.colors["ORANGE"]
+            )
+            self.screen.blit(
+                combo_surface, (margin, margin + line_height * current_line)
+            )
             current_line += 1
 
         # 恐龍狀態顯示
         if self.dinosaur:
             if self.dinosaur.has_shield:
                 shield_text = f"護盾: {self.dinosaur.shield_time // 60 + 1}秒"
-                shield_surface = self.font_small.render(shield_text, True, self.colors["LIGHT_BLUE"])
-                self.screen.blit(shield_surface, (margin, margin + line_height * current_line))
+                shield_surface = self.font_small.render(
+                    shield_text, True, self.colors["LIGHT_BLUE"]
+                )
+                self.screen.blit(
+                    shield_surface, (margin, margin + line_height * current_line)
+                )
                 current_line += 1
 
             if self.dinosaur.dash_cooldown > 0:
                 dash_text = f"衝刺冷卻: {self.dinosaur.dash_cooldown // 60 + 1}秒"
-                dash_surface = self.font_small.render(dash_text, True, self.colors["YELLOW"])
-                self.screen.blit(dash_surface, (margin, margin + line_height * current_line))
+                dash_surface = self.font_small.render(
+                    dash_text, True, self.colors["YELLOW"]
+                )
+                self.screen.blit(
+                    dash_surface, (margin, margin + line_height * current_line)
+                )
                 current_line += 1
 
             # 噩夢模式效果顯示
             if self.selected_difficulty >= Difficulty.NIGHTMARE:
-                if (hasattr(self.dinosaur, "is_gravity_reversed") and 
-                    self.dinosaur.is_gravity_reversed):
+                if (
+                    hasattr(self.dinosaur, "is_gravity_reversed")
+                    and self.dinosaur.is_gravity_reversed
+                ):
                     gravity_text = "⚠️ 重力反轉中！"
-                    gravity_surface = self.font_small.render(gravity_text, True, self.colors["RED"])
-                    self.screen.blit(gravity_surface, (margin, margin + line_height * current_line))
+                    gravity_surface = self.font_small.render(
+                        gravity_text, True, self.colors["RED"]
+                    )
+                    self.screen.blit(
+                        gravity_surface, (margin, margin + line_height * current_line)
+                    )
                     current_line += 1
 
-                if (hasattr(self.dinosaur, "is_control_inverted") and 
-                    self.dinosaur.is_control_inverted):
+                if (
+                    hasattr(self.dinosaur, "is_control_inverted")
+                    and self.dinosaur.is_control_inverted
+                ):
                     control_text = "💀 控制反轉中！"
-                    control_surface = self.font_small.render(control_text, True, self.colors["RED"])
-                    self.screen.blit(control_surface, (margin, margin + line_height * current_line))
+                    control_surface = self.font_small.render(
+                        control_text, True, self.colors["RED"]
+                    )
+                    self.screen.blit(
+                        control_surface, (margin, margin + line_height * current_line)
+                    )
                     current_line += 1
 
     def draw_game_over_screen(self):
@@ -557,7 +623,9 @@ class Game:
 
         # 遊戲結束標題
         game_over_text = "遊戲結束！Game Over!"
-        game_over_surface = self.font_large.render(game_over_text, True, self.colors["RED"])
+        game_over_surface = self.font_large.render(
+            game_over_text, True, self.colors["RED"]
+        )
         game_over_rect = game_over_surface.get_rect(
             center=(self.screen_width // 2, self.screen_height // 2 - 80)
         )
@@ -565,7 +633,9 @@ class Game:
 
         # 分數顯示
         final_score_text = f"最終分數: {self.score}"
-        final_score_surface = self.font_medium.render(final_score_text, True, self.colors["YELLOW"])
+        final_score_surface = self.font_medium.render(
+            final_score_text, True, self.colors["YELLOW"]
+        )
         final_score_rect = final_score_surface.get_rect(
             center=(self.screen_width // 2, self.screen_height // 2 - 30)
         )
@@ -574,7 +644,9 @@ class Game:
         # 最高分顯示
         if self.score == self.high_score and self.high_score > 0:
             new_record_text = "🎉 新紀錄！New Record!"
-            new_record_surface = self.font_medium.render(new_record_text, True, self.colors["PINK"])
+            new_record_surface = self.font_medium.render(
+                new_record_text, True, self.colors["PINK"]
+            )
             new_record_rect = new_record_surface.get_rect(
                 center=(self.screen_width // 2, self.screen_height // 2 + 20)
             )
@@ -582,7 +654,9 @@ class Game:
 
         # 重新開始提示
         restart_text = "空白鍵: 重新開始同難度  |  ESC: 返回主選單"
-        restart_surface = self.font_medium.render(restart_text, True, self.colors["WHITE"])
+        restart_surface = self.font_medium.render(
+            restart_text, True, self.colors["WHITE"]
+        )
         restart_rect = restart_surface.get_rect(
             center=(self.screen_width // 2, self.screen_height // 2 + 70)
         )
@@ -595,9 +669,15 @@ class Game:
         line_spacing = int(self.screen_height * 0.04)
 
         # 主要操作說明
-        instruction_text = "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F11:全螢幕  ESC:返回選單"
-        instruction_surface = self.font_medium.render(instruction_text, True, self.colors["GRAY"])
-        instruction_rect = instruction_surface.get_rect(center=(center_x, instruction_y))
+        instruction_text = (
+            "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F11:全螢幕  ESC:返回選單"
+        )
+        instruction_surface = self.font_medium.render(
+            instruction_text, True, self.colors["GRAY"]
+        )
+        instruction_rect = instruction_surface.get_rect(
+            center=(center_x, instruction_y)
+        )
         self.screen.blit(instruction_surface, instruction_rect)
 
         # 障礙物說明
@@ -606,8 +686,12 @@ class Game:
         else:
             obstacles_text = "⚡ 高難度！注意隱形、爆炸、移動障礙物！"
 
-        obstacles_surface = self.font_small.render(obstacles_text, True, self.colors["BLUE"])
-        obstacles_rect = obstacles_surface.get_rect(center=(center_x, instruction_y + line_spacing))
+        obstacles_surface = self.font_small.render(
+            obstacles_text, True, self.colors["BLUE"]
+        )
+        obstacles_rect = obstacles_surface.get_rect(
+            center=(center_x, instruction_y + line_spacing)
+        )
         self.screen.blit(obstacles_surface, obstacles_rect)
 
         # 難度提示
@@ -617,9 +701,15 @@ class Game:
             Difficulty.HARD: "高速挑戰，考驗反應！",
             Difficulty.NIGHTMARE: "極限模式，生存挑戰！",
         }
-        subtitle_text = f"當前難度: {difficulty_names.get(self.selected_difficulty, '未知難度')}"
-        subtitle_surface = self.font_small.render(subtitle_text, True, self.colors["GREEN"])
-        subtitle_rect = subtitle_surface.get_rect(center=(center_x, instruction_y + line_spacing * 2))
+        subtitle_text = (
+            f"當前難度: {difficulty_names.get(self.selected_difficulty, '未知難度')}"
+        )
+        subtitle_surface = self.font_small.render(
+            subtitle_text, True, self.colors["GREEN"]
+        )
+        subtitle_rect = subtitle_surface.get_rect(
+            center=(center_x, instruction_y + line_spacing * 2)
+        )
         self.screen.blit(subtitle_surface, subtitle_rect)
 
     def run(self):
@@ -637,7 +727,7 @@ class Game:
 
 class Cloud:
     """雲朵類別"""
-    
+
     def __init__(self, screen_width):
         """初始化雲朵"""
         self.x = screen_width + random.randint(0, 200)
@@ -652,4 +742,6 @@ class Cloud:
     def draw(self, screen):
         """繪製雲朵"""
         pygame.draw.ellipse(screen, self.colors["GRAY"], (self.x, self.y, 40, 20))
-        pygame.draw.ellipse(screen, self.colors["GRAY"], (self.x + 10, self.y - 5, 30, 20))
+        pygame.draw.ellipse(
+            screen, self.colors["GRAY"], (self.x + 10, self.y - 5, 30, 20)
+        )

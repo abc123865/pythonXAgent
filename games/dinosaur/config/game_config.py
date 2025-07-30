@@ -17,11 +17,13 @@ FPS = 60
 FULLSCREEN_MODE = False
 WINDOW_MODE = pygame.RESIZABLE
 
+
 # 遊戲狀態常數
 class GameState:
     MENU = 0
     PLAYING = 1
     GAME_OVER = 2
+
 
 # 難度等級常數
 class Difficulty:
@@ -30,11 +32,12 @@ class Difficulty:
     HARD = 3
     NIGHTMARE = 4
 
+
 # 顏色調色板
 def get_color_palette():
     """
     定義遊戲中使用的顏色調色板
-    
+
     Returns:
         dict: 包含所有顏色的字典
     """
@@ -53,6 +56,7 @@ def get_color_palette():
         "DARK_GREEN": (0, 100, 0),
         "DARK_GRAY": (64, 64, 64),
     }
+
 
 # 難度設定
 DIFFICULTY_SETTINGS = {
@@ -86,11 +90,13 @@ DIFFICULTY_SETTINGS = {
     },
 }
 
+
 # 物理常數
 class Physics:
     GRAVITY = 0.8
     JUMP_STRENGTH = -15
     MAX_FALL_SPEED = 20
+
 
 # 字體設定
 FONT_PATH = r"C:\Windows\Fonts\msjh.ttc"  # 微軟正黑體路徑

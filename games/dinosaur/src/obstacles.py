@@ -10,13 +10,21 @@ import random
 import math
 from config.game_config import get_color_palette
 
+
 class Obstacle:
     """基礎障礙物類別"""
 
-    def __init__(self, x=None, obstacle_type="normal", screen_width=800, screen_height=400, ground_height=350):
+    def __init__(
+        self,
+        x=None,
+        obstacle_type="normal",
+        screen_width=800,
+        screen_height=400,
+        ground_height=350,
+    ):
         """
         初始化障礙物
-        
+
         Args:
             x (int): 障礙物的 x 座標
             obstacle_type (str): 障礙物類型
@@ -48,35 +56,35 @@ class Obstacle:
             self.height = int(30 * scale_factor)
             self.y = self.ground_height - self.height
             self.color = self.colors["BLACK"]
-            
+
         elif self.obstacle_type == "tall":
             # 高仙人掌
             self.width = int(25 * scale_factor)
             self.height = int(50 * scale_factor)
             self.y = self.ground_height - self.height
             self.color = self.colors["BLACK"]
-            
+
         elif self.obstacle_type == "wide":
             # 寬仙人掌
             self.width = int(35 * scale_factor)
             self.height = int(35 * scale_factor)
             self.y = self.ground_height - self.height
             self.color = self.colors["BLACK"]
-            
+
         elif self.obstacle_type == "short":
             # 矮仙人掌（不需要跳躍）
             self.width = int(30 * scale_factor)
             self.height = int(15 * scale_factor)
             self.y = self.ground_height - self.height
             self.color = self.colors["DARK_GREEN"]
-            
+
         elif self.obstacle_type == "flying":
             # 飛行障礙物（鳥類）
             self.width = int(25 * scale_factor)
             self.height = int(15 * scale_factor)
             self.y = self.ground_height - int(80 * scale_factor)
             self.color = self.colors["GRAY"]
-            
+
         elif self.obstacle_type == "double":
             # 雙重障礙物（上下兩個）
             self.width = int(20 * scale_factor)
@@ -85,7 +93,7 @@ class Obstacle:
             self.color = self.colors["PURPLE"]
             self.upper_y = self.ground_height - int(100 * scale_factor)
             self.upper_height = int(25 * scale_factor)
-            
+
         elif self.obstacle_type == "moving_up":
             # 上下移動的障礙物
             self.width = int(22 * scale_factor)
@@ -95,7 +103,7 @@ class Obstacle:
             self.color = self.colors["ORANGE"]
             self.move_range = int(30 * scale_factor)
             self.move_speed = 2
-            
+
         elif self.obstacle_type == "invisible":
             # 隱形障礙物（只在警告時可見）
             self.width = int(25 * scale_factor)
@@ -103,7 +111,7 @@ class Obstacle:
             self.y = self.ground_height - self.height
             self.color = self.colors["RED"]
             self.warning_time = 90  # 1.5秒警告時間
-            
+
         elif self.obstacle_type == "explosive":
             # 爆炸障礙物（碰撞後會擴散）
             self.width = int(30 * scale_factor)
@@ -112,7 +120,7 @@ class Obstacle:
             self.color = self.colors["RED"]
             self.explosion_radius = 0
             self.is_exploding = False
-            
+
         elif self.obstacle_type == "armored":
             # 裝甲障礙物（需要多次攻擊）
             self.width = int(35 * scale_factor)
@@ -132,7 +140,7 @@ class Obstacle:
             # 上下移動邏輯
             move_offset = math.sin(self.animation_counter * 0.1) * self.move_range
             self.y = self.original_y + move_offset
-            
+
         elif self.obstacle_type == "invisible":
             # 隱形障礙物警告邏輯
             if self.warning_time > 0:
@@ -140,7 +148,7 @@ class Obstacle:
                 self.is_warned = True
             else:
                 self.is_warned = False
-                
+
         elif self.obstacle_type == "explosive" and self.is_exploding:
             # 爆炸效果
             self.explosion_radius += 3
@@ -169,7 +177,9 @@ class Obstacle:
     def _draw_flying_obstacle(self, screen):
         """繪製飛行障礙物"""
         # 鳥形
-        pygame.draw.ellipse(screen, self.color, (self.x, self.y, self.width, self.height))
+        pygame.draw.ellipse(
+            screen, self.color, (self.x, self.y, self.width, self.height)
+        )
         # 翅膀
         pygame.draw.ellipse(screen, self.color, (self.x - 5, self.y + 3, 15, 8))
         pygame.draw.ellipse(screen, self.color, (self.x + 15, self.y + 3, 15, 8))
@@ -184,13 +194,16 @@ class Obstacle:
     def _draw_double_obstacle(self, screen):
         """繪製雙重障礙物"""
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
-        pygame.draw.rect(screen, self.color, (self.x, self.upper_y, self.width, self.upper_height))
+        pygame.draw.rect(
+            screen, self.color, (self.x, self.upper_y, self.width, self.upper_height)
+        )
         # 連接線
         pygame.draw.line(
-            screen, self.color,
+            screen,
+            self.color,
             (self.x + self.width // 2, self.y),
             (self.x + self.width // 2, self.upper_y + self.upper_height),
-            3
+            3,
         )
 
     def _draw_moving_obstacle(self, screen):
@@ -198,12 +211,13 @@ class Obstacle:
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
         # 移動指示器
         pygame.draw.polygon(
-            screen, self.colors["YELLOW"],
+            screen,
+            self.colors["YELLOW"],
             [
                 (self.x + self.width // 2, self.y - 10),
                 (self.x + self.width // 2 - 5, self.y - 5),
                 (self.x + self.width // 2 + 5, self.y - 5),
-            ]
+            ],
         )
 
     def _draw_invisible_obstacle(self, screen):
@@ -217,8 +231,10 @@ class Obstacle:
             screen.blit(warning_surface, (self.x - 5, self.y - 5))
             # 警告標記
             pygame.draw.rect(
-                screen, self.colors["YELLOW"],
-                (self.x, self.y, self.width, self.height), 3
+                screen,
+                self.colors["YELLOW"],
+                (self.x, self.y, self.width, self.height),
+                3,
             )
 
     def _draw_explosive_obstacle(self, screen):
@@ -234,18 +250,27 @@ class Obstacle:
                     explosion_surface.fill(self.colors["ORANGE"])
                     screen.blit(
                         explosion_surface,
-                        (self.x + self.width // 2 - radius, self.y + self.height // 2 - radius)
+                        (
+                            self.x + self.width // 2 - radius,
+                            self.y + self.height // 2 - radius,
+                        ),
                     )
         else:
-            pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
+            pygame.draw.rect(
+                screen, self.color, (self.x, self.y, self.width, self.height)
+            )
             # 爆炸符號
             pygame.draw.circle(
-                screen, self.colors["YELLOW"],
-                (self.x + self.width // 2, self.y + self.height // 2), 8
+                screen,
+                self.colors["YELLOW"],
+                (self.x + self.width // 2, self.y + self.height // 2),
+                8,
             )
             pygame.draw.circle(
-                screen, self.colors["RED"],
-                (self.x + self.width // 2, self.y + self.height // 2), 5
+                screen,
+                self.colors["RED"],
+                (self.x + self.width // 2, self.y + self.height // 2),
+                5,
             )
 
     def _draw_armored_obstacle(self, screen):
@@ -258,28 +283,31 @@ class Obstacle:
         else:
             current_color = self.colors["RED"]
 
-        pygame.draw.rect(screen, current_color, (self.x, self.y, self.width, self.height))
-        
+        pygame.draw.rect(
+            screen, current_color, (self.x, self.y, self.width, self.height)
+        )
+
         # 裝甲線條
         for i in range(3):
             y_offset = i * (self.height // 3)
             pygame.draw.line(
-                screen, self.colors["WHITE"],
+                screen,
+                self.colors["WHITE"],
                 (self.x, self.y + y_offset),
-                (self.x + self.width, self.y + y_offset), 2
+                (self.x + self.width, self.y + y_offset),
+                2,
             )
-        
+
         # 生命值顯示
         for i in range(self.health):
             pygame.draw.circle(
-                screen, self.colors["WHITE"],
-                (self.x + 5 + i * 8, self.y + 5), 3
+                screen, self.colors["WHITE"], (self.x + 5 + i * 8, self.y + 5), 3
             )
 
     def _draw_normal_obstacle(self, screen):
         """繪製普通障礙物"""
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
-        
+
         if self.obstacle_type == "tall":
             # 高仙人掌添加分支
             pygame.draw.rect(screen, self.color, (self.x - 8, self.y + 15, 15, 8))
@@ -316,11 +344,11 @@ class Obstacle:
 
 class ObstacleManager:
     """障礙物管理器"""
-    
+
     def __init__(self, screen_width, screen_height, ground_height):
         """
         初始化障礙物管理器
-        
+
         Args:
             screen_width (int): 螢幕寬度
             screen_height (int): 螢幕高度
@@ -335,16 +363,16 @@ class ObstacleManager:
     def get_obstacle_types_for_difficulty(self, difficulty, is_gravity_reversed=False):
         """
         根據難度獲取可用的障礙物類型
-        
+
         Args:
             difficulty (int): 難度等級
             is_gravity_reversed (bool): 是否重力反轉
-            
+
         Returns:
             list: 可用的障礙物類型列表
         """
         from config.game_config import Difficulty
-        
+
         if difficulty == Difficulty.EASY:
             obstacle_types = ["normal", "tall", "wide", "short", "flying"]
             if is_gravity_reversed:
@@ -352,43 +380,82 @@ class ObstacleManager:
         elif difficulty == Difficulty.MEDIUM:
             obstacle_types = ["normal", "tall", "wide", "short", "flying", "double"]
             if is_gravity_reversed:
-                obstacle_types = ["flying", "flying", "flying", "double", "short", "normal"]
+                obstacle_types = [
+                    "flying",
+                    "flying",
+                    "flying",
+                    "double",
+                    "short",
+                    "normal",
+                ]
         elif difficulty == Difficulty.HARD:
             obstacle_types = [
-                "normal", "tall", "wide", "short", "flying", "double",
-                "moving_up", "explosive"
+                "normal",
+                "tall",
+                "wide",
+                "short",
+                "flying",
+                "double",
+                "moving_up",
+                "explosive",
             ]
             if is_gravity_reversed:
                 obstacle_types = [
-                    "flying", "flying", "flying", "double", "moving_up",
-                    "explosive", "short", "normal"
+                    "flying",
+                    "flying",
+                    "flying",
+                    "double",
+                    "moving_up",
+                    "explosive",
+                    "short",
+                    "normal",
                 ]
         else:  # NIGHTMARE
             obstacle_types = [
-                "normal", "tall", "wide", "short", "flying", "double",
-                "moving_up", "invisible", "explosive", "armored"
+                "normal",
+                "tall",
+                "wide",
+                "short",
+                "flying",
+                "double",
+                "moving_up",
+                "invisible",
+                "explosive",
+                "armored",
             ]
             if is_gravity_reversed:
                 obstacle_types = [
-                    "flying", "flying", "flying", "flying", "double", "moving_up",
-                    "invisible", "explosive", "armored", "short"
+                    "flying",
+                    "flying",
+                    "flying",
+                    "flying",
+                    "double",
+                    "moving_up",
+                    "invisible",
+                    "explosive",
+                    "armored",
+                    "short",
                 ]
-        
+
         return obstacle_types
 
-    def spawn_obstacle(self, difficulty, obstacle_spawn_rate, is_gravity_reversed=False):
+    def spawn_obstacle(
+        self, difficulty, obstacle_spawn_rate, is_gravity_reversed=False
+    ):
         """
         生成新的障礙物
-        
+
         Args:
             difficulty (int): 難度等級
             obstacle_spawn_rate (float): 障礙物生成速率
             is_gravity_reversed (bool): 是否重力反轉
         """
         if self.spawn_timer <= 0:
-            obstacle_types = self.get_obstacle_types_for_difficulty(difficulty, is_gravity_reversed)
+            obstacle_types = self.get_obstacle_types_for_difficulty(
+                difficulty, is_gravity_reversed
+            )
             obstacle_type = random.choice(obstacle_types)
-            
+
             # 在重力反轉時，有機會同時生成多個空中障礙物
             if is_gravity_reversed and random.randint(1, 3) == 1:
                 self.obstacles.append(
@@ -396,36 +463,38 @@ class ObstacleManager:
                         obstacle_type="flying",
                         screen_width=self.screen_width,
                         screen_height=self.screen_height,
-                        ground_height=self.ground_height
+                        ground_height=self.ground_height,
                     )
                 )
-            
+
             self.obstacles.append(
                 Obstacle(
                     obstacle_type=obstacle_type,
                     screen_width=self.screen_width,
                     screen_height=self.screen_height,
-                    ground_height=self.ground_height
+                    ground_height=self.ground_height,
                 )
             )
 
             # 根據難度調整生成間隔
             base_interval = max(15, int(120 / obstacle_spawn_rate))
             interval_variation = max(5, int(40 / obstacle_spawn_rate))
-            
+
             # 重力反轉時縮短生成間隔
             if is_gravity_reversed:
                 base_interval = int(base_interval * 0.7)
                 interval_variation = int(interval_variation * 0.7)
 
-            self.spawn_timer = random.randint(base_interval, base_interval + interval_variation)
+            self.spawn_timer = random.randint(
+                base_interval, base_interval + interval_variation
+            )
         else:
             self.spawn_timer -= 1
 
     def update(self, game_speed):
         """
         更新所有障礙物
-        
+
         Args:
             game_speed (float): 遊戲速度
         """

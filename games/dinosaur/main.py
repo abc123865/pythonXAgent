@@ -21,10 +21,11 @@ import os
 
 # 添加 src 目錄到 Python 路徑
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(current_dir, 'src')
+src_dir = os.path.join(current_dir, "src")
 sys.path.insert(0, src_dir)
 
 from game_engine import Game
+
 
 def main():
     """主程式入口"""
@@ -71,6 +72,7 @@ def main():
         print(f"❌ 遊戲發生錯誤: {e}")
         print("請確保已安裝 pygame：pip install pygame")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

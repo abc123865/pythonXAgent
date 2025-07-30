@@ -10,25 +10,26 @@ import math
 import random
 from config.game_config import Physics, get_color_palette
 
+
 class Dinosaur:
     """恐龍玩家角色"""
-    
+
     def __init__(self, screen_width, screen_height, ground_height):
         """
         初始化恐龍
-        
+
         Args:
             screen_width (int): 螢幕寬度
             screen_height (int): 螢幕高度
             ground_height (int): 地面高度
         """
         self.colors = get_color_palette()
-        
+
         # 螢幕尺寸
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.ground_height = ground_height
-        
+
         # 動態位置和大小
         scale_factor = min(screen_width / 800, screen_height / 400)
         self.x = int(80 * scale_factor)
@@ -150,7 +151,7 @@ class Dinosaur:
         """更新噩夢模式效果"""
         if not hasattr(self, "nightmare_effects"):
             return
-            
+
         # 重力反轉效果
         previous_gravity_state = self.is_gravity_reversed
         if self.gravity_reversal_time > 0:
@@ -158,7 +159,7 @@ class Dinosaur:
             self.is_gravity_reversed = True
         else:
             self.is_gravity_reversed = False
-        
+
         # 如果重力剛從反轉狀態恢復正常，讓恐龍主動下墜
         if previous_gravity_state and not self.is_gravity_reversed:
             if not self.is_jumping and self.y < self.ground_height - self.height:
@@ -275,7 +276,7 @@ class Dinosaur:
     def apply_nightmare_effect(self, effect_type, duration=180):
         """
         應用噩夢模式效果
-        
+
         Args:
             effect_type (str): 效果類型 ('gravity_reversal', 'control_inversion', 'ability_malfunction')
             duration (int): 效果持續時間（幀數）
