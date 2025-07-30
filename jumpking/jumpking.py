@@ -65,6 +65,7 @@ class Player:
 
     def check_platform_collision(self, platforms):
         player_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        was_on_ground = self.on_ground
         self.on_ground = False
 
         for platform in platforms:
@@ -73,42 +74,70 @@ class Player:
             )
 
             if player_rect.colliderect(platform_rect):
-                # 從上方落下 (改善碰撞檢測)
-                if self.vel_y > 0 and self.y + self.height - 10 <= platform["y"]:
+                # 改善碰撞檢測 - 更精確的判斷
+                overlap_left = (self.x + self.width) - platform["x"]
+                overlap_right = (platform["x"] + platform["width"]) - self.x
+                overlap_top = (self.y + self.height) - platform["y"]
+                overlap_bottom = (platform["y"] + platform["height"]) - self.y
+
+                # 找出最小重疊方向
+                min_overlap = min(
+                    overlap_left, overlap_right, overlap_top, overlap_bottom
+                )
+
+                if min_overlap == overlap_top and self.vel_y >= 0:
+                    # 從上方落下
                     self.y = platform["y"] - self.height
                     self.vel_y = 0
                     self.on_ground = True
-                    print(f"Landed on platform at y={platform['y']}")
-                # 從下方撞擊
-                elif (
-                    self.vel_y < 0 and self.y >= platform["y"] + platform["height"] - 10
-                ):
+                    if not was_on_ground:  # 只在剛落地時印出
+                        print(f"Landed on platform at y={platform['y']}")
+                elif min_overlap == overlap_bottom and self.vel_y <= 0:
+                    # 從下方撞擊
                     self.y = platform["y"] + platform["height"]
                     self.vel_y = 0
-                # 從左側撞擊
-                elif self.vel_x > 0 and self.x + self.width - 10 <= platform["x"]:
+                elif min_overlap == overlap_left and self.vel_x >= 0:
+                    # 從左側撞擊
                     self.x = platform["x"] - self.width
                     self.vel_x = 0
-                # 從右側撞擊
-                elif (
-                    self.vel_x < 0 and self.x >= platform["x"] + platform["width"] - 10
-                ):
+                elif min_overlap == overlap_right and self.vel_x <= 0:
+                    # 從右側撞擊
                     self.x = platform["x"] + platform["width"]
                     self.vel_x = 0
 
+        # 簡化地面檢測 - 如果玩家底部接觸任何平台就算在地面上
+        if not self.on_ground:
+            # 檢查玩家底部是否接觸平台
+            for platform in platforms:
+                # 檢查水平重疊
+                if (
+                    self.x < platform["x"] + platform["width"]
+                    and self.x + self.width > platform["x"]
+                ):
+                    # 檢查垂直接觸（允許小誤差）
+                    platform_top = platform["y"]
+                    player_bottom = self.y + self.height
+                    if abs(player_bottom - platform_top) <= 3 and self.vel_y >= -0.5:
+                        self.on_ground = True
+                        self.y = platform_top - self.height
+                        self.vel_y = 0
+                        break
+
     def start_jump_charge(self):
-        if self.on_ground:
-            self.jump_charging = True
-            self.jump_power = MIN_JUMP_POWER
-            print(f"Started charging jump. On ground: {self.on_ground}")
+        # 移除 on_ground 檢查，允許任何時候開始蓄力（但執行時仍需檢查）
+        self.jump_charging = True
+        self.jump_power = MIN_JUMP_POWER
+        print(f"Started charging jump. On ground: {self.on_ground}")
 
     def update_jump_charge(self):
-        if self.jump_charging and self.on_ground:
+        # 只要在蓄力就持續增加力量
+        if self.jump_charging:
             self.jump_power += JUMP_CHARGE_RATE
             if self.jump_power > MAX_JUMP_POWER:
                 self.jump_power = MAX_JUMP_POWER
 
     def execute_jump(self, direction):
+        # 只有在地面上且蓄力時才能跳躍
         if self.jump_charging and self.on_ground:
             # 計算跳躍向量
             angle = 0
@@ -139,6 +168,14 @@ class Player:
                 f"Jump executed! Direction: {direction}, Power: {jump_force}, Angle: {angle}"
             )
             print(f"Velocity set to: x={self.vel_x:.2f}, y={self.vel_y:.2f}")
+        else:
+            # 即使無法跳躍也要重置蓄力狀態
+            if self.jump_charging:
+                print(
+                    f"Jump failed! On ground: {self.on_ground}, Charging: {self.jump_charging}"
+                )
+                self.jump_charging = False
+                self.jump_power = 0
 
     def draw(self, screen, camera_y):
         # 繪製玩家
@@ -187,17 +224,20 @@ class Game:
 
         # 初始化玩家 (確保在地面上)
         self.player = Player(100, 510)  # 調整Y座標確保在起始平台上
+        print(f"Player initialized at position: ({self.player.x}, {self.player.y})")
 
         # 相機
         self.camera_y = 0
 
         # 創建平台
         self.platforms = self.create_platforms()
+        print(f"Created {len(self.platforms)} platforms")
 
         # 遊戲狀態
         self.highest_y = self.player.y
         self.save_file = "jumpking_save.json"
         self.load_game()
+        print("Game initialized successfully!")
 
     def create_platforms(self):
         platforms = []
@@ -274,16 +314,20 @@ class Game:
                     self.player.y = 510  # 調整重置位置
                     self.player.vel_x = 0
                     self.player.vel_y = 0
+                    self.player.on_ground = True  # 確保重置時在地面上
                     self.save_game()
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
                     # 決定跳躍方向
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_LEFT]:
+                        print("Left key detected - jumping left")
                         self.player.execute_jump("left")
                     elif keys[pygame.K_RIGHT]:
+                        print("Right key detected - jumping right")
                         self.player.execute_jump("right")
                     else:
+                        print("No direction key - jumping up")
                         self.player.execute_jump("up")
 
     def update(self):
@@ -345,19 +389,23 @@ class Game:
         pygame.display.flip()
 
     def draw_ui(self):
-        font = pygame.font.Font(None, 36)
+        font = pygame.font.Font(None, 28)
 
         # 顯示控制說明
         instructions = [
-            "Hold SPACE to charge jump",
-            "Release SPACE to jump",
-            "LEFT/RIGHT arrows for direction",
-            "R to reset position",
+            "CONTROLS (重要!):",
+            "1. 按住 SPACE 開始蓄力",
+            "2. 蓄力時按住 LEFT 或 RIGHT",
+            "3. 放開 SPACE 執行跳躍",
+            "4. 按 R 重置位置",
+            "",
+            "注意: 必須在蓄力時按住方向鍵!",
         ]
 
         for i, instruction in enumerate(instructions):
-            text = font.render(instruction, True, WHITE)
-            self.screen.blit(text, (10, 10 + i * 25))
+            color = YELLOW if i == 0 or i == 6 else WHITE
+            text = font.render(instruction, True, color)
+            self.screen.blit(text, (10, 10 + i * 22))
 
         # 顯示高度
         height_text = f"Height: {max(0, int((550 - self.player.y) / 10))}m"
@@ -367,7 +415,18 @@ class Game:
         # 顯示最高記錄
         best_height = f"Best: {max(0, int((550 - self.highest_y) / 10))}m"
         text = font.render(best_height, True, YELLOW)
-        self.screen.blit(text, (SCREEN_WIDTH - 200, 40))
+        self.screen.blit(text, (SCREEN_WIDTH - 200, 35))
+
+        # 顯示當前狀態
+        status_text = f"On Ground: {self.player.on_ground}"
+        text = font.render(status_text, True, GREEN if self.player.on_ground else RED)
+        self.screen.blit(text, (SCREEN_WIDTH - 200, 60))
+
+        # 顯示蓄力狀態
+        if self.player.jump_charging:
+            charge_text = f"Charging: {self.player.jump_power:.1f}"
+            text = font.render(charge_text, True, YELLOW)
+            self.screen.blit(text, (SCREEN_WIDTH - 200, 85))
 
     def run(self):
         while self.running:
