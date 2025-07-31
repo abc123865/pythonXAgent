@@ -581,6 +581,28 @@ class Game:
                     stripe_surface.fill(flicker_color)
                     self.screen.blit(stripe_surface, (0, i * stripe_height))
 
+    def get_background_color(self):
+        """根據分數和難度計算背景顏色 (日夜反轉效果)"""
+        # 分數達到2000時進入夜晚模式
+        if self.score >= 2000:
+            # 夜晚模式：黑色背景，根據難度調整亮度
+            night_colors = {
+                Difficulty.EASY: self.colors["BLACK"],
+                Difficulty.MEDIUM: (20, 20, 20),
+                Difficulty.HARD: (40, 40, 40),
+                Difficulty.NIGHTMARE: (60, 60, 60),
+            }
+            return night_colors.get(self.selected_difficulty, self.colors["BLACK"])
+        else:
+            # 白天模式：原本的背景色
+            day_colors = {
+                Difficulty.EASY: self.colors["WHITE"],
+                Difficulty.MEDIUM: (250, 250, 250),
+                Difficulty.HARD: (240, 240, 240),
+                Difficulty.NIGHTMARE: (200, 200, 200),
+            }
+            return day_colors.get(self.selected_difficulty, self.colors["WHITE"])
+
     def spawn_cloud(self):
         """生成雲朵"""
         if self.cloud_timer <= 0:
@@ -699,20 +721,15 @@ class Game:
                 else 0
             )
 
-            # 根據難度調整背景色
-            bg_colors = {
-                Difficulty.EASY: self.colors["WHITE"],
-                Difficulty.MEDIUM: (250, 250, 250),
-                Difficulty.HARD: (240, 240, 240),
-                Difficulty.NIGHTMARE: (200, 200, 200),
-            }
-            current_bg = bg_colors.get(self.selected_difficulty, self.colors["WHITE"])
+            # 根據難度和分數調整背景色 (日夜反轉效果)
+            current_bg = self.get_background_color()
             self.screen.fill(current_bg)
 
             # 畫地面
+            ground_color = self.colors["WHITE"] if self.score >= 2000 else self.colors["BLACK"]
             pygame.draw.line(
                 self.screen,
-                self.colors["BLACK"],
+                ground_color,
                 (screen_offset_x, self.ground_height + screen_offset_y),
                 (
                     self.screen_width + screen_offset_x,
@@ -760,16 +777,25 @@ class Game:
         margin = int(self.screen_width * 0.0125)
         line_height = int(self.screen_height * 0.04)
 
+        # 根據日夜模式選擇文字顏色
+        is_night_mode = self.score >= 2000
+        text_color = self.colors["WHITE"] if is_night_mode else self.colors["BLACK"]
+        accent_color = self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
+        special_color = self.colors["PINK"] if is_night_mode else self.colors["PURPLE"]
+
         # 分數顯示
         score_text = f"分數: {self.score}"
-        score_surface = self.font_medium.render(score_text, True, self.colors["BLACK"])
+        if is_night_mode and self.score == 2000:
+            # 第一次達到2000分時特殊提示
+            score_text += " 🌙 夜晚模式"
+        score_surface = self.font_medium.render(score_text, True, text_color)
         self.screen.blit(score_surface, (margin, margin))
 
         # 距離顯示
         distance_km = self.total_distance / 1000
         distance_text = f"距離: {distance_km:.1f}km"
         distance_surface = self.font_small.render(
-            distance_text, True, self.colors["BLUE"]
+            distance_text, True, accent_color
         )
         self.screen.blit(distance_surface, (margin, margin + line_height))
 
@@ -777,7 +803,7 @@ class Game:
         if self.high_score > 0:
             high_score_text = f"最高分: {self.high_score}"
             high_score_surface = self.font_small.render(
-                high_score_text, True, self.colors["PURPLE"]
+                high_score_text, True, special_color
             )
             self.screen.blit(high_score_surface, (margin, margin + line_height * 2))
 
@@ -976,12 +1002,17 @@ class Game:
         instruction_y = int(self.screen_height * 0.15)
         line_spacing = int(self.screen_height * 0.04)
 
+        # 根據日夜模式選擇文字顏色
+        is_night_mode = self.score >= 2000
+        instruction_color = self.colors["WHITE"] if is_night_mode else self.colors["GRAY"]
+        accent_color = self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
+
         # 主要操作說明
         instruction_text = (
             "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F11:全螢幕  ESC:返回選單"
         )
         instruction_surface = self.font_medium.render(
-            instruction_text, True, self.colors["GRAY"]
+            instruction_text, True, instruction_color
         )
         instruction_rect = instruction_surface.get_rect(
             center=(center_x, instruction_y)
@@ -995,7 +1026,7 @@ class Game:
             obstacles_text = "⚡ 高難度！注意隱形、爆炸、移動障礙物！"
 
         obstacles_surface = self.font_small.render(
-            obstacles_text, True, self.colors["BLUE"]
+            obstacles_text, True, accent_color
         )
         obstacles_rect = obstacles_surface.get_rect(
             center=(center_x, instruction_y + line_spacing)
