@@ -247,7 +247,7 @@ class Game:
 
         # 播放遊戲開始音效
         self.sound_manager.play_menu_select()
-        
+
         # 開始背景音樂
         self.sound_manager.start_background_music()
 
@@ -1146,9 +1146,7 @@ class Game:
             )
 
         # 主要操作說明
-        instruction_text = (
-            "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F1:音效  F2:音樂  F11:全螢幕  ESC:返回選單"
-        )
+        instruction_text = "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F1:音效  F2:音樂  F11:全螢幕  ESC:返回選單"
         instruction_surface = self.font_medium.render(
             instruction_text, True, instruction_color
         )

@@ -195,15 +195,46 @@ class ScoreSystem:
 
 ## 開發工作流程
 
+### 專案架構與模組系統
+
+遊戲採用嚴格的模組化設計：
+
+```python
+# main.py - 僅作為入口點，動態添加 src/ 到路徑
+sys.path.insert(0, src_dir)
+from game_engine import Game
+```
+
+**關鍵模組職責**：
+
+- `game_engine.py`：狀態管理、事件循環、日夜轉換、視覺效果協調
+- `config/game_config.py`：所有常數集中管理，包括難度矩陣和物理參數
+- `sound_manager.py`：複雜的多層音效系統，支援實時合成和背景音樂
+- `obstacles.py`：多態障礙物系統，每種類型實作統一介面
+
 ### 執行和測試
 
 ```bash
 # 在專案根目錄執行
 python main.py
 
-# 確保已安裝依賴
+# 確保已安裝核心依賴
 pip install pygame
+
+# 可選依賴 (音效增強)
+pip install numpy      # 專業音效合成
+pip install yt-dlp     # YouTube 背景音樂下載
+# FFmpeg 需要另外安裝以支援音頻格式轉換
 ```
+
+### 依賴層級與容錯機制
+
+項目採用分層依賴設計，確保即使某些依賴不可用也能正常運行：
+
+- **核心層**：僅需 `pygame`，基本遊戲功能完整
+- **音效增強層**：`numpy` 提供專業 Popcat 音效合成
+- **音樂層**：`yt-dlp` + `FFmpeg` 支援 YouTube 音樂下載
+- **備用機制**：每層失敗時自動降級到更簡單的實現
 
 ### 偵錯策略
 
@@ -237,6 +268,18 @@ pip install pygame
 2. 實作對應的播放方法
 3. 考慮複合音效（如連續播放多個頻率）
 4. 所有音效都使用異步播放
+
+**音效合成技術要點**：
+
+- 使用雙階段波形（攻擊+衰減）模擬 Popcat 效果
+- 諧波疊加和噪音注入增強音效質感
+- 三層容錯：numpy 版本 → 純數學版本 → 系統 API
+
+**背景音樂系統**：
+
+- 支援 YouTube URL 自動下載（需 yt-dlp）
+- 智慧格式轉換：WebM → WAV 或 MP3
+- 備用音樂自動生成：和諧的多聲部合成音樂
 
 ### 視覺效果開發
 
