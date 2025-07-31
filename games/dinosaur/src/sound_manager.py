@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 音效管理系統
-處理遊戲中的所有音效播放 - 真正的 Popcat 音效
+處理遊戲中的所有音效播放 - 真正的 Popcat 音效 + 背景音樂
 """
 
 import pygame
@@ -11,6 +11,8 @@ import time
 import sys
 import math
 import array
+import os
+import subprocess
 from config.game_config import SoundSystem
 
 
@@ -21,6 +23,13 @@ class SoundManager:
         """初始化音效系統"""
         self.enabled = SoundSystem.SOUND_ENABLED
         self.volume = SoundSystem.SOUND_VOLUME
+        
+        # 背景音樂相關
+        self.background_music_enabled = True
+        self.background_music_volume = 0.3
+        self.background_music_url = "https://www.youtube.com/watch?v=kK81m-A3qpU"
+        self.background_music_file = None
+        self.is_music_playing = False
 
         if self.enabled:
             try:
@@ -30,6 +39,10 @@ class SoundManager:
                 )
                 pygame.mixer.init()
                 print("🔊 真正的 Popcat 音效系統初始化成功")
+                
+                # 初始化背景音樂
+                self.setup_background_music()
+                
             except pygame.error as e:
                 print(f"⚠️ 音效系統初始化失敗: {e}")
                 self.enabled = False
@@ -278,8 +291,168 @@ class SoundManager:
         status = "開啟" if self.enabled else "關閉"
         print(f"🔊 音效系統已{status}")
 
+    def setup_background_music(self):
+        """設置背景音樂"""
+        if not self.background_music_enabled:
+            return
+            
+        try:
+            # 創建音樂目錄
+            music_dir = os.path.join(os.path.dirname(__file__), "..", "assets", "music")
+            os.makedirs(music_dir, exist_ok=True)
+            
+            self.background_music_file = os.path.join(music_dir, "background_music.mp3")
+            
+            # 檢查是否已有音樂文件
+            if not os.path.exists(self.background_music_file):
+                print("🎵 正在下載背景音樂...")
+                self.download_background_music()
+            
+            # 載入背景音樂
+            if os.path.exists(self.background_music_file):
+                pygame.mixer.music.load(self.background_music_file)
+                pygame.mixer.music.set_volume(self.background_music_volume)
+                print("🎵 背景音樂載入成功")
+            else:
+                print("⚠️ 背景音樂文件不存在")
+                
+        except Exception as e:
+            print(f"⚠️ 背景音樂設置失敗: {e}")
+            self.background_music_enabled = False
+
+    def download_background_music(self):
+        """下載背景音樂"""
+        try:
+            # 嘗試使用 yt-dlp 下載音樂
+            command = [
+                "yt-dlp",
+                "--extract-audio",
+                "--audio-format", "mp3",
+                "--audio-quality", "192K",
+                "-o", self.background_music_file.replace(".mp3", ".%(ext)s"),
+                self.background_music_url
+            ]
+            
+            result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            
+            if result.returncode == 0:
+                print("✅ 背景音樂下載成功")
+            else:
+                print(f"⚠️ yt-dlp 下載失敗: {result.stderr}")
+                # 創建一個備用的靜音文件
+                self.create_fallback_music()
+                
+        except subprocess.TimeoutExpired:
+            print("⚠️ 下載超時，使用備用音樂")
+            self.create_fallback_music()
+        except FileNotFoundError:
+            print("⚠️ 找不到 yt-dlp，請安裝: pip install yt-dlp")
+            self.create_fallback_music()
+        except Exception as e:
+            print(f"⚠️ 下載背景音樂時發生錯誤: {e}")
+            self.create_fallback_music()
+
+    def create_fallback_music(self):
+        """創建備用音樂（簡單的循環音效）"""
+        try:
+            # 生成一個簡單的背景音調
+            import numpy as np
+            
+            sample_rate = 22050
+            duration = 30  # 30秒循環
+            frames = sample_rate * duration
+            
+            # 生成和諧的背景音
+            t = np.linspace(0, duration, frames)
+            
+            # 使用多個諧波創建舒緩的背景音
+            wave = (
+                0.1 * np.sin(2 * np.pi * 220 * t) +  # A3
+                0.08 * np.sin(2 * np.pi * 330 * t) +  # E4
+                0.06 * np.sin(2 * np.pi * 440 * t) +  # A4
+                0.04 * np.sin(2 * np.pi * 660 * t)    # E5
+            )
+            
+            # 添加淡入淡出
+            fade_samples = sample_rate // 2  # 0.5秒淡入淡出
+            fade_in = np.linspace(0, 1, fade_samples)
+            fade_out = np.linspace(1, 0, fade_samples)
+            
+            wave[:fade_samples] *= fade_in
+            wave[-fade_samples:] *= fade_out
+            
+            # 轉換為 16-bit 立體聲
+            wave = (wave * 32767 * 0.3).astype(np.int16)
+            stereo_wave = np.column_stack((wave, wave))
+            
+            # 保存為臨時音頻文件
+            import tempfile
+            import wave as wave_module
+            
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+                with wave_module.open(temp_file.name, 'wb') as wav_file:
+                    wav_file.setnchannels(2)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(sample_rate)
+                    wav_file.writeframes(stereo_wave.tobytes())
+                
+                # 複製到最終位置
+                import shutil
+                fallback_file = self.background_music_file.replace(".mp3", "_fallback.wav")
+                shutil.copy2(temp_file.name, fallback_file)
+                self.background_music_file = fallback_file
+                
+                print("🎵 已創建備用背景音樂")
+                
+        except Exception as e:
+            print(f"⚠️ 創建備用音樂失敗: {e}")
+            self.background_music_enabled = False
+
+    def start_background_music(self):
+        """開始播放背景音樂"""
+        if not self.background_music_enabled or not self.enabled:
+            return
+            
+        try:
+            if self.background_music_file and os.path.exists(self.background_music_file):
+                pygame.mixer.music.play(-1)  # -1 表示無限循環
+                self.is_music_playing = True
+                print("🎵 背景音樂開始播放")
+            else:
+                print("⚠️ 背景音樂文件不存在")
+        except Exception as e:
+            print(f"⚠️ 播放背景音樂失敗: {e}")
+
+    def stop_background_music(self):
+        """停止背景音樂"""
+        try:
+            pygame.mixer.music.stop()
+            self.is_music_playing = False
+            print("🎵 背景音樂已停止")
+        except Exception as e:
+            print(f"⚠️ 停止背景音樂失敗: {e}")
+
+    def toggle_background_music(self):
+        """切換背景音樂開關"""
+        if self.is_music_playing:
+            self.stop_background_music()
+        else:
+            self.start_background_music()
+
+    def set_music_volume(self, volume):
+        """設置背景音樂音量"""
+        self.background_music_volume = max(0.0, min(1.0, volume))
+        try:
+            pygame.mixer.music.set_volume(self.background_music_volume)
+        except Exception as e:
+            print(f"⚠️ 設置音樂音量失敗: {e}")
+
     def cleanup(self):
         """清理音效系統"""
+        # 停止背景音樂
+        if self.is_music_playing:
+            self.stop_background_music()
+            
         if self.enabled:
             try:
                 pygame.mixer.quit()

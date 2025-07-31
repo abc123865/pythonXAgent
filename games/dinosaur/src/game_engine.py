@@ -247,6 +247,9 @@ class Game:
 
         # 播放遊戲開始音效
         self.sound_manager.play_menu_select()
+        
+        # 開始背景音樂
+        self.sound_manager.start_background_music()
 
     def return_to_menu(self):
         """返回主選單"""
@@ -267,6 +270,9 @@ class Game:
                 elif event.key == pygame.K_F1:
                     # F1 切換音效開關
                     self.sound_manager.toggle_sound()
+                elif event.key == pygame.K_F2:
+                    # F2 切換背景音樂開關
+                    self.sound_manager.toggle_background_music()
                 elif event.key == pygame.K_F4 and (
                     pygame.key.get_pressed()[pygame.K_LALT]
                     or pygame.key.get_pressed()[pygame.K_RALT]
@@ -1141,7 +1147,7 @@ class Game:
 
         # 主要操作說明
         instruction_text = (
-            "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F11:全螢幕  ESC:返回選單"
+            "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F1:音效  F2:音樂  F11:全螢幕  ESC:返回選單"
         )
         instruction_surface = self.font_medium.render(
             instruction_text, True, instruction_color

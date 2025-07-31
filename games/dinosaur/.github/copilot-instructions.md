@@ -38,13 +38,18 @@ self.font_large = pygame.font.Font(FONT_PATH, large_size)
 
 ### 3. 實時音效合成系統
 
-`sound_manager.py` 使用 numpy 實現真正的 Popcat 音效合成：
+`sound_manager.py` 使用 numpy 實現真正的 Popcat 音效合成，並支援背景音樂：
 
 ```python
 def generate_popcat_sound(self, base_frequency, duration):
     # 快速攻擊階段 + 噪音模擬 "p" 音
     # 指數衰減階段 + 諧波豐富化
     # 生成立體聲 16-bit 音頻數據
+
+def setup_background_music(self):
+    # YouTube 音頻下載與播放
+    # 自動備用音樂生成
+    # 背景音樂循環播放
 ```
 
 特點：
@@ -53,6 +58,9 @@ def generate_popcat_sound(self, base_frequency, duration):
 - 支援複合音效（如衝刺的三連音、死亡的五段下降音）
 - 容錯機制：numpy 失敗時回退到簡化版，再失敗時使用系統音效
 - 異步播放避免阻塞遊戲循環
+- **YouTube 背景音樂**：自動下載指定 URL 的音頻作為背景音樂
+- **智慧備用系統**：無法下載時自動生成和諧的合成背景音樂
+- **音樂控制**：F2 鍵切換背景音樂開關，支援音量調節
 
 ### 4. 日夜循環與視覺適應
 
@@ -106,7 +114,7 @@ speed_bonus = int(current_speed * speed_multiplier)
 
 ### 音效合成架構
 
-專業級 Popcat 音效生成，結合多層容錯機制：
+專業級 Popcat 音效生成，結合多層容錯機制和背景音樂系統：
 
 1. **主要生成器**：numpy 版本
 
@@ -120,7 +128,14 @@ speed_bonus = int(current_speed * speed_multiplier)
    - 保持基本的波形包絡
 
 3. **系統備案**：Windows API 音效
+
    - 完全失敗時的最後手段
+
+4. **背景音樂系統**：
+   - **YouTube 下載**：使用 yt-dlp 自動下載指定 URL 的音頻
+   - **備用生成**：無法下載時自動生成和諧的合成背景音樂
+   - **循環播放**：支援無限循環和音量控制
+   - **動態控制**：F2 鍵實時切換開關
 
 所有音效都異步播放，支援複合序列（如死亡時的五段下降音）。
 
