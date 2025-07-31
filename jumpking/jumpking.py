@@ -40,7 +40,7 @@ GAME_OVER = 3
 VICTORY = 4
 
 # 關卡設定
-TOTAL_LEVELS = 10
+TOTAL_LEVELS = 11
 
 
 class Player:
@@ -77,7 +77,7 @@ class Player:
         self.x = x
         self.y = y
 
-    def update(self, platforms, death_zones=None):
+    def update(self, platforms, death_zones=None, level_num=None):
         # 處理重力
         if not self.on_ground:
             self.vel_y += GRAVITY
@@ -90,6 +90,29 @@ class Player:
 
         # 檢查屏幕邊界並反彈
         self.check_screen_boundaries()
+
+        # 特殊處理第11關的掉落機制
+        if level_num == 11 and self.y > 400:  # 當玩家在較高位置時
+            # 如果玩家墜落速度很快且在特定區域，有機率觸發直接掉落
+            if self.vel_y > 10:  # 高速墜落時
+                import random
+
+                # 在特定x座標範圍內，有15%機率直接掉到底部
+                danger_zones = [
+                    (90, 160),  # 第一個危險區域
+                    (240, 310),  # 第二個危險區域
+                    (490, 560),  # 第三個危險區域
+                    (740, 810),  # 第四個危險區域
+                ]
+
+                for min_x, max_x in danger_zones:
+                    if min_x <= self.x + self.width / 2 <= max_x:
+                        if random.random() < 0.15:  # 15%機率
+                            # 直接掉到底部
+                            self.y = 500
+                            self.vel_y = 0
+                            self.reset_position()
+                            return "fall_trap"
 
         # 檢查死亡區域
         if death_zones:
@@ -382,35 +405,35 @@ class LevelManager:
             "target_deaths": 20,
         }
 
-        # 第6關 - 高級挑戰
+        # 第6關 - 高級挑戰（稍微降低難度）
         levels[6] = {
             "name": "高手之路",
             "platforms": [
-                {"x": 0, "y": 550, "width": 60, "height": 50},
-                {"x": 100, "y": 500, "width": 20, "height": 10},
-                {"x": 180, "y": 460, "width": 20, "height": 10},
-                {"x": 260, "y": 420, "width": 20, "height": 10},
-                {"x": 340, "y": 380, "width": 20, "height": 10},
-                {"x": 420, "y": 340, "width": 20, "height": 10},
-                {"x": 500, "y": 300, "width": 20, "height": 10},
-                {"x": 580, "y": 260, "width": 20, "height": 10},
-                {"x": 660, "y": 220, "width": 20, "height": 10},
-                {"x": 580, "y": 180, "width": 20, "height": 10},
-                {"x": 500, "y": 140, "width": 20, "height": 10},
-                {"x": 420, "y": 100, "width": 20, "height": 10},
-                {"x": 340, "y": 60, "width": 20, "height": 10},
-                {"x": 260, "y": 20, "width": 20, "height": 10},
+                {"x": 0, "y": 550, "width": 80, "height": 50},  # 增加起始平台大小
+                {"x": 120, "y": 500, "width": 30, "height": 15},  # 增加平台大小
+                {"x": 200, "y": 460, "width": 30, "height": 15},
+                {"x": 280, "y": 420, "width": 30, "height": 15},
+                {"x": 360, "y": 380, "width": 30, "height": 15},
+                {"x": 440, "y": 340, "width": 30, "height": 15},
+                {"x": 520, "y": 300, "width": 30, "height": 15},
+                {"x": 600, "y": 260, "width": 30, "height": 15},
+                {"x": 680, "y": 220, "width": 30, "height": 15},
+                {"x": 600, "y": 180, "width": 30, "height": 15},
+                {"x": 520, "y": 140, "width": 30, "height": 15},
+                {"x": 440, "y": 100, "width": 30, "height": 15},
+                {"x": 360, "y": 60, "width": 30, "height": 15},
+                {"x": 280, "y": 20, "width": 30, "height": 15},
                 {"x": 350, "y": -40, "width": 100, "height": 30},
             ],
             "death_zones": [
                 {"x": 0, "y": 600, "width": 800, "height": 100},
-                {"x": 60, "y": 400, "width": 40, "height": 200},
-                {"x": 300, "y": 300, "width": 40, "height": 200},
-                {"x": 540, "y": 200, "width": 40, "height": 200},
+                {"x": 80, "y": 400, "width": 40, "height": 200},  # 減少死亡區域
+                {"x": 320, "y": 300, "width": 40, "height": 200},
+                {"x": 560, "y": 200, "width": 40, "height": 200},
             ],
             "goal_y": -40,
-            "start_pos": (30, 500),
-            "target_deaths": 30,
+            "start_pos": (40, 500),
+            "target_deaths": 25,  # 稍微降低目標
         }
 
         # 第7關 - 專家級
@@ -834,6 +857,100 @@ class LevelManager:
             "target_deaths": 100,
         }
 
+        # 第11關 - 無限爬升挑戰（會有掉落陷阱的關卡）
+        levels[11] = {
+            "name": "絕望之塔",
+            "platforms": [
+                {"x": 0, "y": 550, "width": 100, "height": 50},  # 底層起始平台
+                # 第一段 - 基礎爬升
+                {"x": 150, "y": 500, "width": 80, "height": 15},
+                {"x": 300, "y": 450, "width": 80, "height": 15},
+                {"x": 450, "y": 400, "width": 80, "height": 15},
+                {"x": 600, "y": 350, "width": 80, "height": 15},
+                {"x": 750, "y": 300, "width": 80, "height": 15},
+                # 第二段 - 危險區域開始
+                {"x": 200, "y": 250, "width": 60, "height": 15},
+                {"x": 400, "y": 200, "width": 60, "height": 15},
+                {"x": 600, "y": 150, "width": 60, "height": 15},
+                {"x": 150, "y": 100, "width": 60, "height": 15},
+                {"x": 350, "y": 50, "width": 60, "height": 15},
+                {"x": 550, "y": 0, "width": 60, "height": 15},
+                # 第三段 - 極危險區域
+                {"x": 100, "y": -50, "width": 50, "height": 12},
+                {"x": 300, "y": -100, "width": 50, "height": 12},
+                {"x": 500, "y": -150, "width": 50, "height": 12},
+                {"x": 200, "y": -200, "width": 50, "height": 12},
+                {"x": 400, "y": -250, "width": 50, "height": 12},
+                {"x": 600, "y": -300, "width": 50, "height": 12},
+                # 第四段 - 超極限區域
+                {"x": 150, "y": -350, "width": 40, "height": 10},
+                {"x": 350, "y": -400, "width": 40, "height": 10},
+                {"x": 550, "y": -450, "width": 40, "height": 10},
+                {"x": 250, "y": -500, "width": 40, "height": 10},
+                {"x": 450, "y": -550, "width": 40, "height": 10},
+                {"x": 100, "y": -600, "width": 40, "height": 10},
+                {"x": 300, "y": -650, "width": 40, "height": 10},
+                {"x": 500, "y": -700, "width": 40, "height": 10},
+                # 第五段 - 地獄難度
+                {"x": 200, "y": -750, "width": 30, "height": 8},
+                {"x": 400, "y": -800, "width": 30, "height": 8},
+                {"x": 150, "y": -850, "width": 30, "height": 8},
+                {"x": 350, "y": -900, "width": 30, "height": 8},
+                {"x": 550, "y": -950, "width": 30, "height": 8},
+                {"x": 250, "y": -1000, "width": 30, "height": 8},
+                {"x": 450, "y": -1050, "width": 30, "height": 8},
+                {"x": 100, "y": -1100, "width": 30, "height": 8},
+                {"x": 300, "y": -1150, "width": 30, "height": 8},
+                # 最終段 - 絕望之頂
+                {"x": 500, "y": -1200, "width": 25, "height": 5},
+                {"x": 200, "y": -1250, "width": 25, "height": 5},
+                {"x": 400, "y": -1300, "width": 25, "height": 5},
+                {"x": 150, "y": -1350, "width": 25, "height": 5},
+                {"x": 350, "y": -1400, "width": 25, "height": 5},
+                {"x": 550, "y": -1450, "width": 25, "height": 5},
+                {"x": 250, "y": -1500, "width": 25, "height": 5},
+                {"x": 450, "y": -1550, "width": 25, "height": 5},
+                # 最終目標 - 勝利平台
+                {"x": 300, "y": -1600, "width": 200, "height": 50},
+            ],
+            "death_zones": [
+                # 底部死亡區域
+                {"x": 0, "y": 600, "width": 1200, "height": 200},
+                # 關鍵的掉落陷阱 - 這些會讓玩家直接掉到底部
+                {"x": 100, "y": 480, "width": 50, "height": 20},  # 第一個陷阱
+                {"x": 250, "y": 380, "width": 50, "height": 20},  # 第二個陷阱
+                {"x": 500, "y": 280, "width": 50, "height": 20},  # 第三個陷阱
+                {"x": 750, "y": 200, "width": 50, "height": 20},  # 第四個陷阱
+                # 中段陷阱區域
+                {"x": 80, "y": 180, "width": 40, "height": 100},
+                {"x": 280, "y": 80, "width": 40, "height": 100},
+                {"x": 480, "y": -20, "width": 40, "height": 100},
+                {"x": 180, "y": -120, "width": 40, "height": 100},
+                {"x": 380, "y": -220, "width": 40, "height": 100},
+                # 高段陷阱區域 - 更加危險
+                {"x": 120, "y": -320, "width": 30, "height": 80},
+                {"x": 320, "y": -420, "width": 30, "height": 80},
+                {"x": 520, "y": -520, "width": 30, "height": 80},
+                {"x": 220, "y": -620, "width": 30, "height": 80},
+                {"x": 420, "y": -720, "width": 30, "height": 80},
+                # 超高段陷阱 - 極度危險
+                {"x": 170, "y": -820, "width": 25, "height": 60},
+                {"x": 370, "y": -920, "width": 25, "height": 60},
+                {"x": 270, "y": -1020, "width": 25, "height": 60},
+                {"x": 470, "y": -1120, "width": 25, "height": 60},
+                {"x": 120, "y": -1220, "width": 25, "height": 60},
+                {"x": 320, "y": -1320, "width": 25, "height": 60},
+                {"x": 520, "y": -1420, "width": 25, "height": 60},
+                {"x": 220, "y": -1520, "width": 25, "height": 60},
+                # 最終陷阱 - 就在目標附近
+                {"x": 0, "y": -1570, "width": 100, "height": 30},
+                {"x": 500, "y": -1570, "width": 200, "height": 30},
+            ],
+            "goal_y": -1600,
+            "start_pos": (50, 500),
+            "target_deaths": 150,  # 這是一個超級挑戰關卡
+        }
+
         return levels
 
     def get_level(self, level_num):
@@ -894,10 +1011,17 @@ class Game:
             "C:\\Windows\\Fonts\\kaiu.ttf",  # 標楷體
         ]
 
-        # 根據縮放調整字體大小
-        large_size = self.get_scaled_font(48)
-        medium_size = self.get_scaled_font(36)
-        small_size = self.get_scaled_font(24)
+        # 根據縮放調整字體大小，但確保在全屏模式下字體不會太小
+        if self.fullscreen:
+            # 全屏模式下使用基礎字體大小，因為會通過虛擬畫布縮放
+            large_size = 48
+            medium_size = 36
+            small_size = 24
+        else:
+            # 視窗模式使用原始大小
+            large_size = 48
+            medium_size = 36
+            small_size = 24
 
         font_loaded = False
         for font_path in font_paths:
@@ -1174,11 +1298,19 @@ class Game:
             return
 
         # 更新玩家
-        result = self.player.update(level_data["platforms"], level_data["death_zones"])
+        result = self.player.update(
+            level_data["platforms"], level_data["death_zones"], self.current_level
+        )
 
         # 檢查死亡
         if result == "death":
             self.player.reset_position()
+            self.level_stats[str(self.current_level)][
+                "deaths"
+            ] = self.player.death_count
+            self.save_progress()
+        elif result == "fall_trap":
+            # 掉落陷阱的特殊處理 - 不重置但記錄
             self.level_stats[str(self.current_level)][
                 "deaths"
             ] = self.player.death_count
@@ -1204,63 +1336,79 @@ class Game:
 
     def draw_menu(self):
         """繪製主選單"""
-        self.screen.fill(DARK_BLUE)
+        if self.fullscreen:
+            # 全屏模式下，先繪製到虛擬畫布
+            virtual_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.draw_menu_content(virtual_screen)
+            self.scale_and_blit_virtual_screen(virtual_screen)
+        else:
+            # 視窗模式直接繪製
+            self.draw_menu_content(self.screen)
+
+    def draw_menu_content(self, screen):
+        """繪製主選單內容"""
+        screen.fill(DARK_BLUE)
 
         # 標題
         title = self.font_large.render("Jump King - 十關挑戰", True, YELLOW)
-        title_x, title_y = self.scale_pos(SCREEN_WIDTH // 2, 150)
-        title_rect = title.get_rect(center=(title_x, title_y))
-        self.screen.blit(title, title_rect)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
+        screen.blit(title, title_rect)
 
         # 副標題
         subtitle = self.font_medium.render("考驗你的耐心與技巧", True, WHITE)
-        subtitle_x, subtitle_y = self.scale_pos(SCREEN_WIDTH // 2, 200)
-        subtitle_rect = subtitle.get_rect(center=(subtitle_x, subtitle_y))
-        self.screen.blit(subtitle, subtitle_rect)
+        subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        screen.blit(subtitle, subtitle_rect)
 
         # 選單選項
         menu_options = ["開始遊戲", "繼續遊戲", "退出遊戲"]
         for i, option in enumerate(menu_options):
             color = YELLOW if i == self.menu_selection else WHITE
             text = self.font_medium.render(option, True, color)
-            text_x, text_y = self.scale_pos(SCREEN_WIDTH // 2, 300 + i * 50)
-            text_rect = text.get_rect(center=(text_x, text_y))
-            self.screen.blit(text, text_rect)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 300 + i * 50))
+            screen.blit(text, text_rect)
 
         # 進度資訊
         progress_text = f"已解鎖關卡: {self.unlocked_levels}/{TOTAL_LEVELS}"
         progress = self.font_small.render(progress_text, True, GREEN)
-        progress_x, progress_y = self.scale_pos(SCREEN_WIDTH // 2, 500)
-        progress_rect = progress.get_rect(center=(progress_x, progress_y))
-        self.screen.blit(progress, progress_rect)
+        progress_rect = progress.get_rect(center=(SCREEN_WIDTH // 2, 500))
+        screen.blit(progress, progress_rect)
 
         # 操作說明
         controls = ["↑↓ 選擇", "Enter 確認", "ESC 退出", "F11 切換全屏"]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
-            control_x, control_y = self.scale_pos(50, 500 + i * 25)
-            self.screen.blit(text, (control_x, control_y))
+            screen.blit(text, (50, 500 + i * 25))
 
     def draw_level_select(self):
         """繪製關卡選擇畫面"""
-        self.screen.fill(DARK_BLUE)
+        if self.fullscreen:
+            # 全屏模式下，先繪製到虛擬畫布
+            virtual_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.draw_level_select_content(virtual_screen)
+            self.scale_and_blit_virtual_screen(virtual_screen)
+        else:
+            # 視窗模式直接繪製
+            self.draw_level_select_content(self.screen)
+
+    def draw_level_select_content(self, screen):
+        """繪製關卡選擇畫面內容"""
+        screen.fill(DARK_BLUE)
 
         # 標題
         title = self.font_large.render("選擇關卡", True, YELLOW)
-        title_x, title_y = self.scale_pos(SCREEN_WIDTH // 2, 100)
-        title_rect = title.get_rect(center=(title_x, title_y))
-        self.screen.blit(title, title_rect)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        screen.blit(title, title_rect)
 
         # 關卡選項
         start_x = 50
-        start_y = 200
-        cols = 5
+        start_y = 180
+        cols = 6  # 改為6列以容納11關
         rows = 2
 
         for level in range(1, TOTAL_LEVELS + 1):
             row = (level - 1) // cols
             col = (level - 1) % cols
-            x = start_x + col * 140
+            x = start_x + col * 120  # 稍微減小間距
             y = start_y + row * 120
 
             # 使用縮放位置
@@ -1274,6 +1422,21 @@ class Game:
                 color = GRAY
                 text_color = BLACK
                 status = "鎖定"
+            elif level == 11:
+                # 第11關特殊顯示
+                if (
+                    str(level) in self.level_stats
+                    and self.level_stats[str(level)]["completed"]
+                ):
+                    color = PURPLE  # 完成的第11關用紫色
+                    text_color = WHITE
+                    deaths = self.level_stats[str(level)]["best_deaths"]
+                    status = f"征服\n{deaths}死"
+                else:
+                    color = (128, 0, 128)  # 未完成的第11關用深紫色
+                    text_color = WHITE
+                    deaths = self.level_stats.get(str(level), {}).get("deaths", 0)
+                    status = f"挑戰\n{deaths}死"
             elif (
                 str(level) in self.level_stats
                 and self.level_stats[str(level)]["completed"]
@@ -1347,12 +1510,23 @@ class Game:
                 self.screen.blit(name, name_rect)
 
                 # 目標死亡次數
-                target = self.font_small.render(
-                    f"挑戰目標: {level_data['target_deaths']}次死亡內完成", True, WHITE
-                )
+                target_text = f"挑戰目標: {level_data['target_deaths']}次死亡內完成"
+                if self.level_select_selection == 11:
+                    target_text = f"超級挑戰: {level_data['target_deaths']}次死亡內完成"
+                target = self.font_small.render(target_text, True, WHITE)
                 target_x, target_y = self.scale_pos(SCREEN_WIDTH // 2, detail_y + 30)
                 target_rect = target.get_rect(center=(target_x, target_y))
                 self.screen.blit(target, target_rect)
+
+                # 第11關特殊警告
+                if self.level_select_selection == 11:
+                    warning_text = "⚠️ 注意：此關卡包含隨機掉落陷阱！"
+                    warning = self.font_small.render(warning_text, True, RED)
+                    warning_x, warning_y = self.scale_pos(
+                        SCREEN_WIDTH // 2, detail_y + 55
+                    )
+                    warning_rect = warning.get_rect(center=(warning_x, warning_y))
+                    self.screen.blit(warning, warning_rect)
 
         # 操作說明
         controls = ["← → 選擇關卡", "Enter 開始", "ESC 返回", "F11 切換全屏"]
@@ -1367,17 +1541,17 @@ class Game:
             # 全屏模式下，先繪製到虛擬畫布
             virtual_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
             self.draw_playing_content(virtual_screen)
-            
+
             # 縮放並居中顯示虛擬畫布
             scaled_surface = pygame.transform.scale(
-                virtual_screen, 
-                (int(SCREEN_WIDTH * self.ui_scale), int(SCREEN_HEIGHT * self.ui_scale))
+                virtual_screen,
+                (int(SCREEN_WIDTH * self.ui_scale), int(SCREEN_HEIGHT * self.ui_scale)),
             )
-            
+
             # 計算居中位置
             offset_x = (self.screen_width - SCREEN_WIDTH * self.ui_scale) // 2
             offset_y = (self.screen_height - SCREEN_HEIGHT * self.ui_scale) // 2
-            
+
             # 清除螢幕並繪製縮放後的畫面
             self.screen.fill(BLACK)
             self.screen.blit(scaled_surface, (offset_x, offset_y))
@@ -1385,7 +1559,22 @@ class Game:
             # 視窗模式直接繪製
             self.draw_playing_content(self.screen)
 
-    def draw_playing_content(self, screen):
+    def scale_and_blit_virtual_screen(self, virtual_screen):
+        """縮放虛擬畫布並繪製到實際螢幕"""
+        # 縮放並居中顯示虛擬畫布
+        scaled_surface = pygame.transform.scale(
+            virtual_screen,
+            (int(SCREEN_WIDTH * self.ui_scale), int(SCREEN_HEIGHT * self.ui_scale)),
+        )
+
+        # 計算居中位置
+        offset_x = (self.screen_width - SCREEN_WIDTH * self.ui_scale) // 2
+        offset_y = (self.screen_height - SCREEN_HEIGHT * self.ui_scale) // 2
+
+        # 清除螢幕並繪製縮放後的畫面
+        self.screen.fill(BLACK)
+        self.screen.blit(scaled_surface, (offset_x, offset_y))
+
     def draw_playing_content(self, screen):
         """繪製遊戲畫面內容"""
         screen.fill(DARK_BLUE)
@@ -1403,7 +1592,9 @@ class Game:
         # 左邊界牆壁
         pygame.draw.rect(screen, GRAY, (0, 0, wall_width, SCREEN_HEIGHT))
         # 右邊界牆壁
-        pygame.draw.rect(screen, GRAY, (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT))
+        pygame.draw.rect(
+            screen, GRAY, (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT)
+        )
 
         # 繪製平台
         for platform in level_data["platforms"]:
@@ -1435,11 +1626,87 @@ class Game:
                 ),
             )
 
+        # 第11關特殊視覺效果 - 繪製掉落陷阱警告區域
+        if self.current_level == 11:
+            danger_zones = [
+                (90, 160, 480, 20),  # x_min, x_max, y, height
+                (240, 310, 380, 20),
+                (490, 560, 280, 20),
+                (740, 810, 200, 20),
+            ]
+
+            import time
+
+            # 讓警告區域閃爍
+            alpha = int(128 + 127 * abs((time.time() * 3) % 2 - 1))
+            warning_color = (*ORANGE, alpha)
+
+            for min_x, max_x, y, height in danger_zones:
+                # 創建一個有透明度的表面
+                warning_surface = pygame.Surface((max_x - min_x, height))
+                warning_surface.set_alpha(alpha)
+                warning_surface.fill(ORANGE)
+                screen.blit(warning_surface, (min_x, y - self.camera_y))
+
         # 繪製玩家
         self.draw_player_content(screen, self.camera_y)
 
         # 繪製UI
         self.draw_playing_ui_content(screen, level_data)
+
+    def draw_player_content(self, screen, camera_y):
+        """繪製玩家（不縮放版本，用於虛擬畫布）"""
+        if not self.player:
+            return
+
+        # 繪製玩家
+        player_color = BLUE
+        if self.player.jump_charging:
+            # 蓄力時顯示不同顏色
+            charge_ratio = (self.player.jump_power - MIN_JUMP_POWER) / (
+                MAX_JUMP_POWER - MIN_JUMP_POWER
+            )
+            red_component = min(255, int(100 + charge_ratio * 155))
+            player_color = (red_component, 100, 237)
+
+        pygame.draw.rect(
+            screen,
+            player_color,
+            (
+                self.player.x,
+                self.player.y - camera_y,
+                self.player.width,
+                self.player.height,
+            ),
+        )
+
+        # 繪製面向方向指示
+        eye_offset_x = 20 if self.player.facing_right else 10
+        eye_x = self.player.x + eye_offset_x
+        eye_y = self.player.y - camera_y + 10
+        pygame.draw.circle(screen, WHITE, (eye_x, eye_y), 3)
+
+        # 繪製蓄力指示器
+        if self.player.jump_charging:
+            charge_ratio = (self.player.jump_power - MIN_JUMP_POWER) / (
+                MAX_JUMP_POWER - MIN_JUMP_POWER
+            )
+            bar_width = 40
+            bar_height = 8
+            bar_x = self.player.x - 5
+            bar_y = self.player.y - camera_y - 15
+
+            # 背景
+            pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
+
+            # 蓄力條
+            charge_width = int(bar_width * charge_ratio)
+            charge_color = (
+                RED if charge_ratio > 0.8 else YELLOW if charge_ratio > 0.5 else GREEN
+            )
+            pygame.draw.rect(
+                screen, charge_color, (bar_x, bar_y, charge_width, bar_height)
+            )
 
     def draw_player(self, camera_y):
         """繪製玩家（適應縮放）"""
@@ -1535,6 +1802,12 @@ class Game:
             "撞牆會反彈！",
         ]
 
+        # 第11關特殊說明
+        if self.current_level == 11:
+            controls.append("⚠️ 小心！某些區域")
+            controls.append("高速墜落會觸發")
+            controls.append("掉落陷阱！")
+
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, WHITE)
             control_x, control_y = self.scale_pos(10, SCREEN_HEIGHT - 140 + i * 20)
@@ -1554,15 +1827,82 @@ class Game:
             charge_x, charge_y = self.scale_pos(SCREEN_WIDTH - 150, 60)
             self.screen.blit(text, (charge_x, charge_y))
 
+    def draw_playing_ui_content(self, screen, level_data):
+        """繪製遊戲中的UI（不縮放版本，用於虛擬畫布）"""
+        # 關卡資訊
+        level_text = f"第{self.current_level}關: {level_data['name']}"
+        text = self.font_medium.render(level_text, True, YELLOW)
+        screen.blit(text, (10, 10))
+
+        # 死亡次數
+        deaths_text = f"死亡次數: {self.player.death_count}"
+        text = self.font_small.render(deaths_text, True, WHITE)
+        screen.blit(text, (10, 45))
+
+        # 目標
+        target_text = f"目標: {level_data['target_deaths']}次內完成"
+        color = GREEN if self.player.death_count <= level_data["target_deaths"] else RED
+        text = self.font_small.render(target_text, True, color)
+        screen.blit(text, (10, 70))
+
+        # 高度
+        height = max(0, int((level_data["start_pos"][1] - self.player.y) / 10))
+        height_text = f"高度: {height}m"
+        text = self.font_small.render(height_text, True, WHITE)
+        screen.blit(text, (SCREEN_WIDTH - 150, 10))
+
+        # 控制說明
+        controls = [
+            "按住 SPACE 蓄力",
+            "蓄力時按 ← → 選方向",
+            "放開 SPACE 跳躍",
+            "R 重置位置",
+            "ESC 返回選單",
+            "F11 切換全屏",
+            "撞牆會反彈！",
+        ]
+
+        # 第11關特殊說明
+        if self.current_level == 11:
+            controls.append("⚠️ 小心！某些區域")
+            controls.append("高速墜落會觸發")
+            controls.append("掉落陷阱！")
+
+        for i, control in enumerate(controls):
+            text = self.font_small.render(control, True, WHITE)
+            screen.blit(text, (10, SCREEN_HEIGHT - 140 + i * 20))
+
+        # 玩家狀態
+        status_text = f"在地面: {'是' if self.player.on_ground else '否'}"
+        color = GREEN if self.player.on_ground else RED
+        text = self.font_small.render(status_text, True, color)
+        screen.blit(text, (SCREEN_WIDTH - 150, 35))
+
+        # 蓄力狀態
+        if self.player.jump_charging:
+            charge_text = f"蓄力: {self.player.jump_power:.1f}"
+            text = self.font_small.render(charge_text, True, YELLOW)
+            screen.blit(text, (SCREEN_WIDTH - 150, 60))
+
     def draw_victory(self):
         """繪製勝利畫面"""
-        self.screen.fill(DARK_BLUE)
+        if self.fullscreen:
+            # 全屏模式下，先繪製到虛擬畫布
+            virtual_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.draw_victory_content(virtual_screen)
+            self.scale_and_blit_virtual_screen(virtual_screen)
+        else:
+            # 視窗模式直接繪製
+            self.draw_victory_content(self.screen)
+
+    def draw_victory_content(self, screen):
+        """繪製勝利畫面內容"""
+        screen.fill(DARK_BLUE)
 
         # 勝利訊息
         title = self.font_large.render("恭喜過關！", True, YELLOW)
-        title_x, title_y = self.scale_pos(SCREEN_WIDTH // 2, 200)
-        title_rect = title.get_rect(center=(title_x, title_y))
-        self.screen.blit(title, title_rect)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        screen.blit(title, title_rect)
 
         # 統計資料
         level_data = self.level_manager.get_level(self.current_level)
@@ -1572,29 +1912,25 @@ class Game:
 
             stats_text = f"第{self.current_level}關: {level_data['name']}"
             text = self.font_medium.render(stats_text, True, WHITE)
-            stats_x, stats_y = self.scale_pos(SCREEN_WIDTH // 2, 280)
-            text_rect = text.get_rect(center=(stats_x, stats_y))
-            self.screen.blit(text, text_rect)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 280))
+            screen.blit(text, text_rect)
 
             deaths_text = f"死亡次數: {deaths}"
             color = GREEN if deaths <= target else RED
             text = self.font_medium.render(deaths_text, True, color)
-            deaths_x, deaths_y = self.scale_pos(SCREEN_WIDTH // 2, 320)
-            text_rect = text.get_rect(center=(deaths_x, deaths_y))
-            self.screen.blit(text, text_rect)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 320))
+            screen.blit(text, text_rect)
 
             target_text = f"目標: {target}次"
             text = self.font_medium.render(target_text, True, WHITE)
-            target_x, target_y = self.scale_pos(SCREEN_WIDTH // 2, 360)
-            text_rect = text.get_rect(center=(target_x, target_y))
-            self.screen.blit(text, text_rect)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 360))
+            screen.blit(text, text_rect)
 
             if deaths <= target:
                 perfect_text = "挑戰成功！"
                 text = self.font_medium.render(perfect_text, True, GREEN)
-                perfect_x, perfect_y = self.scale_pos(SCREEN_WIDTH // 2, 400)
-                text_rect = text.get_rect(center=(perfect_x, perfect_y))
-                self.screen.blit(text, text_rect)
+                text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 400))
+                screen.blit(text, text_rect)
 
         # 操作說明
         if self.current_level < TOTAL_LEVELS:
@@ -1603,22 +1939,19 @@ class Game:
             continue_text = "你已完成所有關卡！"
 
         text = self.font_small.render(continue_text, True, WHITE)
-        continue_x, continue_y = self.scale_pos(SCREEN_WIDTH // 2, 480)
-        text_rect = text.get_rect(center=(continue_x, continue_y))
-        self.screen.blit(text, text_rect)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 480))
+        screen.blit(text, text_rect)
 
         back_text = "ESC 返回主選單"
         text = self.font_small.render(back_text, True, WHITE)
-        back_x, back_y = self.scale_pos(SCREEN_WIDTH // 2, 510)
-        text_rect = text.get_rect(center=(back_x, back_y))
-        self.screen.blit(text, text_rect)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 510))
+        screen.blit(text, text_rect)
 
         # F11全屏快捷鍵說明
         fullscreen_text = "F11 切換全屏"
         text = self.font_small.render(fullscreen_text, True, GRAY)
-        fullscreen_x, fullscreen_y = self.scale_pos(SCREEN_WIDTH // 2, 540)
-        text_rect = text.get_rect(center=(fullscreen_x, fullscreen_y))
-        self.screen.blit(text, text_rect)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 540))
+        screen.blit(text, text_rect)
 
     def draw(self):
         """繪製畫面"""
