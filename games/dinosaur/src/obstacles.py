@@ -74,9 +74,11 @@ class Obstacle:
             self.color = self.colors["BLACK"]
 
         elif self.obstacle_type == "short":
-            # 矮仙人掌（不需要跳躍）
+            # 矮仙人掌（不需要跳躍，但噩夢模式下會變高）
             self.width = int(30 * scale_factor)
-            self.height = int(15 * scale_factor)
+            # 根據螢幕高度動態調整 - 噩夢模式需要更高的石頭
+            base_height = int(25 * scale_factor)  # 從15增加到25
+            self.height = base_height
             self.y = self.ground_height - self.height
             self.color = self.colors["DARK_GREEN"]
 
@@ -389,9 +391,22 @@ class Obstacle:
         """檢查是否可以蹲下通過"""
         return self.obstacle_type in ["flying"]
 
-    def can_walk_through(self):
-        """檢查是否可以直接走過"""
-        return self.obstacle_type in ["short"]
+    def can_walk_through(self, difficulty=None):
+        """
+        檢查是否可以直接走過
+
+        Args:
+            difficulty: 當前遊戲難度，噩夢模式下矮障礙物不能走過
+        """
+        from config.game_config import Difficulty
+
+        if self.obstacle_type == "short":
+            # 噩夢模式下，矮障礙物變高，不能直接走過
+            if difficulty == Difficulty.NIGHTMARE:
+                return False
+            else:
+                return True
+        return False
 
     def trigger_explosion(self):
         """觸發爆炸效果"""
@@ -438,68 +453,21 @@ class ObstacleManager:
         from config.game_config import Difficulty
 
         if difficulty == Difficulty.EASY:
+            obstacle_types = ["normal", "tall", "wide", "short"]
+            if is_gravity_reversed:
+                obstacle_types = ["flying", "short", "normal"]
+        elif difficulty == Difficulty.MEDIUM:
             obstacle_types = ["normal", "tall", "wide", "short", "flying"]
             if is_gravity_reversed:
-                obstacle_types = ["flying", "flying", "short", "normal", "wide"]
-        elif difficulty == Difficulty.MEDIUM:
+                obstacle_types = ["flying", "flying", "short", "normal"]
+        elif difficulty == Difficulty.HARD:
             obstacle_types = ["normal", "tall", "wide", "short", "flying", "double"]
             if is_gravity_reversed:
-                obstacle_types = [
-                    "flying",
-                    "flying",
-                    "flying",
-                    "double",
-                    "short",
-                    "normal",
-                ]
-        elif difficulty == Difficulty.HARD:
-            obstacle_types = [
-                "normal",
-                "tall",
-                "wide",
-                "short",
-                "flying",
-                "double",
-                "moving_up",
-                "explosive",
-            ]
+                obstacle_types = ["flying", "flying", "double", "short", "normal"]
+        else:  # NIGHTMARE - 保持簡單但速度極快
+            obstacle_types = ["normal", "tall", "wide", "flying", "double"]
             if is_gravity_reversed:
-                obstacle_types = [
-                    "flying",
-                    "flying",
-                    "flying",
-                    "double",
-                    "moving_up",
-                    "explosive",
-                    "short",
-                    "normal",
-                ]
-        else:  # NIGHTMARE
-            obstacle_types = [
-                "normal",
-                "tall",
-                "wide",
-                "short",
-                "flying",
-                "double",
-                "moving_up",
-                "invisible",
-                "explosive",
-                "armored",
-            ]
-            if is_gravity_reversed:
-                obstacle_types = [
-                    "flying",
-                    "flying",
-                    "flying",
-                    "flying",
-                    "double",
-                    "moving_up",
-                    "invisible",
-                    "explosive",
-                    "armored",
-                    "short",
-                ]
+                obstacle_types = ["flying", "flying", "flying", "double", "normal"]
 
         return obstacle_types
 
@@ -520,18 +488,6 @@ class ObstacleManager:
             )
             obstacle_type = random.choice(obstacle_types)
 
-            # 在重力反轉時，有機會同時生成多個空中障礙物
-            if is_gravity_reversed and random.randint(1, 3) == 1:
-                self.obstacles.append(
-                    Obstacle(
-                        obstacle_type="flying",
-                        screen_width=self.screen_width,
-                        screen_height=self.screen_height,
-                        ground_height=self.ground_height,
-                        is_gravity_reversed=is_gravity_reversed,
-                    )
-                )
-
             self.obstacles.append(
                 Obstacle(
                     obstacle_type=obstacle_type,
@@ -540,14 +496,11 @@ class ObstacleManager:
                     ground_height=self.ground_height,
                     is_gravity_reversed=is_gravity_reversed,
                 )
-            )  # 根據難度調整生成間隔
-            base_interval = max(15, int(120 / obstacle_spawn_rate))
-            interval_variation = max(5, int(40 / obstacle_spawn_rate))
+            )
 
-            # 重力反轉時縮短生成間隔
-            if is_gravity_reversed:
-                base_interval = int(base_interval * 0.7)
-                interval_variation = int(interval_variation * 0.7)
+            # 根據難度調整生成間隔，簡化邏輯
+            base_interval = max(20, int(100 / obstacle_spawn_rate))
+            interval_variation = max(10, int(30 / obstacle_spawn_rate))
 
             self.spawn_timer = random.randint(
                 base_interval, base_interval + interval_variation

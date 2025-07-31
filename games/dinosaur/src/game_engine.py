@@ -360,12 +360,20 @@ class Game:
         if random.randint(1, 300) == 1:
             self.screen_shake = random.randint(5, 15)
 
-        # 重力異常
-        if random.randint(1, 600) == 1:
-            self.dinosaur.apply_nightmare_effect(
-                "gravity_reversal", random.randint(180, 300)
-            )
-            print("⚠️ 重力異常發生！")
+        # 重力異常 - 自動觸發，無需跳躍
+        if random.randint(1, 400) == 1:
+            # 如果恐龍目前沒有重力反轉效果，立即啟動
+            if self.dinosaur.gravity_reversal_time <= 0:
+                self.dinosaur.apply_nightmare_effect(
+                    "gravity_reversal", random.randint(180, 300)
+                )
+                # 立即將恐龍設為跳躍狀態以適應重力變化
+                if not self.dinosaur.is_jumping:
+                    self.dinosaur.is_jumping = True
+                    self.dinosaur.jump_speed = (
+                        2 if not self.dinosaur.is_gravity_reversed else -2
+                    )
+                print("⚠️ 重力異常發生！")
 
     def spawn_cloud(self):
         """生成雲朵"""
@@ -402,7 +410,7 @@ class Game:
 
             if collision_detected:
                 # 檢查特殊情況
-                if obstacle.can_walk_through():
+                if obstacle.can_walk_through(self.selected_difficulty):
                     self.combo_count += 1
                     self.score += 5
                     continue

@@ -123,6 +123,14 @@ class Dinosaur:
             self.is_ducking = True
             self.height = int(self.original_height * 0.5)
             self.y = self.ground_height - self.height
+        elif self.is_jumping:
+            # 在跳躍時按蹲下可以快速下降
+            if not self.is_gravity_reversed:
+                # 正常重力時向下快速下降
+                self.jump_speed = max(self.jump_speed, 8)
+            else:
+                # 重力反轉時向上快速移動
+                self.jump_speed = min(self.jump_speed, -8)
 
     def stand_up(self):
         """站起來動作"""
@@ -156,15 +164,23 @@ class Dinosaur:
         previous_gravity_state = self.is_gravity_reversed
         if self.gravity_reversal_time > 0:
             self.gravity_reversal_time -= 1
-            self.is_gravity_reversed = True
+            if not self.is_gravity_reversed:
+                # 第一次進入重力反轉狀態
+                self.is_gravity_reversed = True
+                # 自動讓恐龍開始"跳躍"以適應重力變化
+                if not self.is_jumping:
+                    self.is_jumping = True
+                    self.jump_speed = -3  # 向天花板移動
+            else:
+                self.is_gravity_reversed = True
         else:
-            self.is_gravity_reversed = False
-
-        # 如果重力剛從反轉狀態恢復正常，讓恐龍主動下墜
-        if previous_gravity_state and not self.is_gravity_reversed:
-            if not self.is_jumping and self.y < self.ground_height - self.height:
-                self.is_jumping = True
-                self.jump_speed = 2
+            if self.is_gravity_reversed:
+                # 重力反轉結束，恢復正常
+                self.is_gravity_reversed = False
+                # 如果恐龍在空中，讓其自然下落
+                if self.y < self.ground_height - self.height:
+                    self.is_jumping = True
+                    self.jump_speed = 2
 
         # 控制反轉效果
         if self.control_inversion_time > 0:
