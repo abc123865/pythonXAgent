@@ -163,11 +163,11 @@ class Player:
                 elif min_overlap == overlap_left and self.vel_x >= 0:
                     # 從左側撞擊平台 - 反彈
                     self.x = platform["x"] - self.width
-                    self.vel_x = -self.vel_x * 0.4  # 反彈，減少速度
+                    self.vel_x = -self.vel_x * 0.6  # 反彈，保持更多速度
                 elif min_overlap == overlap_right and self.vel_x <= 0:
                     # 從右側撞擊平台 - 反彈
                     self.x = platform["x"] + platform["width"]
-                    self.vel_x = -self.vel_x * 0.4  # 反彈，減少速度
+                    self.vel_x = -self.vel_x * 0.6  # 反彈，保持更多速度
 
         # 簡化地面檢測 - 如果玩家底部接觸任何平台就算在地面上
         if not self.on_ground:
