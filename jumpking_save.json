@@ -1,5 +1,5 @@
 {
-  "unlocked_levels": 7,
+  "unlocked_levels": 11,
   "level_stats": {
     "1": {
       "deaths": 0,
@@ -7,32 +7,52 @@
       "best_deaths": 0
     },
     "2": {
-      "deaths": 4,
+      "deaths": 2,
       "completed": true,
-      "best_deaths": 4
+      "best_deaths": 2
     },
     "3": {
       "deaths": 4,
       "completed": true,
-      "best_deaths": 4
+      "best_deaths": 0
     },
     "4": {
-      "deaths": 5,
+      "deaths": 10,
       "completed": true,
       "best_deaths": 5
     },
     "5": {
-      "deaths": 19,
+      "deaths": 6,
       "completed": true,
-      "best_deaths": 19
+      "best_deaths": 6
     },
     "6": {
-      "deaths": 25,
+      "deaths": 9,
       "completed": true,
-      "best_deaths": 25
+      "best_deaths": 9
     },
     "7": {
-      "deaths": 6,
+      "deaths": 8,
+      "completed": true,
+      "best_deaths": 0
+    },
+    "8": {
+      "deaths": 4,
+      "completed": true,
+      "best_deaths": 2
+    },
+    "9": {
+      "deaths": 35,
+      "completed": true,
+      "best_deaths": 4
+    },
+    "10": {
+      "deaths": 23,
+      "completed": true,
+      "best_deaths": 6
+    },
+    "11": {
+      "deaths": 4,
       "completed": false,
       "best_deaths": null
     }
