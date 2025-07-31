@@ -452,9 +452,13 @@ class Game:
                         self.game_start_flash_timer = 0
 
                 if not self.game_over:
-                    # 噩夢模式的特殊效果
+                    # 噩夢模式的特殊效果 - 用單獨的 try-catch 避免影響遊戲主循環
                     if self.selected_difficulty >= Difficulty.NIGHTMARE:
-                        self.apply_nightmare_effects()
+                        try:
+                            self.apply_nightmare_effects()
+                        except Exception as nightmare_error:
+                            print(f"⚠️ 噩夢模式效果錯誤（已忽略）: {nightmare_error}")
+                            # 不返回主選單，繼續遊戲
 
                     # 更新恐龍
                     self.dinosaur.update()
@@ -501,16 +505,18 @@ class Game:
                         if self.update_high_score(self.score):
                             print(f"🎉 新紀錄！分數: {self.high_score}")
         except Exception as e:
-            print(f"❌ 遊戲更新時發生錯誤: {e}")
+            print(f"❌ 遊戲更新時發生嚴重錯誤: {e}")
             import traceback
 
             traceback.print_exc()
-            # 返回選單而不是直接退出
-            self.game_state = GameState.MENU
+            # 只有在非常嚴重的錯誤時才返回選單
+            # 對於噩夢模式的一般錯誤，不應該返回選單
+            if "nightmare" not in str(e).lower():
+                self.game_state = GameState.MENU
 
-            # 減少螢幕震動
-            if self.screen_shake > 0:
-                self.screen_shake -= 1
+        # 減少螢幕震動（移到 try-catch 外面）
+        if self.screen_shake > 0:
+            self.screen_shake -= 1
 
     def update_distance_and_score(self):
         """更新距離追蹤和分數系統"""
@@ -635,49 +641,65 @@ class Game:
 
     def apply_nightmare_effects(self):
         """應用噩夢模式的特殊效果"""
+        # 確保恐龍物件存在
         if not self.dinosaur:
             return
 
-        # 更新螢幕閃爍計時器
-        self.screen_flicker_timer += 1
+        try:
+            # 更新螢幕閃爍計時器
+            self.screen_flicker_timer += 1
 
-        # 檢查是否到達下一次閃爍時間
-        if (
-            self.screen_flicker_timer >= self.next_flicker_time
-            and self.screen_flicker_duration <= 0
-        ):
-            # 開始新的閃爍效果
-            self.screen_flicker_duration = random.randint(30, 90)  # 0.5-1.5秒閃爍
-            self.screen_flicker_timer = 0
-            # 設定下一次閃爍時間 (隨機 2-8秒後)
-            self.next_flicker_time = random.randint(120, 480)  # 隨機 2-8秒
-            print("💥 噩夢模式：螢幕閃爍開始！")
+            # 檢查是否到達下一次閃爍時間
+            if (
+                self.screen_flicker_timer >= self.next_flicker_time
+                and self.screen_flicker_duration <= 0
+            ):
+                # 開始新的閃爍效果
+                self.screen_flicker_duration = random.randint(30, 90)  # 0.5-1.5秒閃爍
+                self.screen_flicker_timer = 0
+                # 設定下一次閃爍時間 (隨機 2-8秒後)
+                self.next_flicker_time = random.randint(120, 480)  # 隨機 2-8秒
+                print("💥 噩夢模式：螢幕閃爍開始！")
 
-            # 播放閃電音效
-            self.sound_manager.play_lightning_sound()
+                # 播放閃電音效
+                try:
+                    self.sound_manager.play_lightning_sound()
+                except Exception as sound_error:
+                    print(f"⚠️ 音效播放錯誤: {sound_error}")
 
-        # 減少閃爍持續時間
-        if self.screen_flicker_duration > 0:
-            self.screen_flicker_duration -= 1
+            # 減少閃爍持續時間
+            if self.screen_flicker_duration > 0:
+                self.screen_flicker_duration -= 1
 
-        # 原有的螢幕震動效果 (保持較低頻率)
-        if random.randint(1, 500) == 1:
-            self.screen_shake = random.randint(3, 8)
+            # 原有的螢幕震動效果 (保持較低頻率)
+            if random.randint(1, 500) == 1:
+                self.screen_shake = random.randint(3, 8)
 
-        # 重力異常 - 自動觸發，無需跳躍
-        if random.randint(1, 400) == 1:
-            # 如果恐龍目前沒有重力反轉效果，立即啟動
-            if self.dinosaur.gravity_reversal_time <= 0:
-                self.dinosaur.apply_nightmare_effect(
-                    "gravity_reversal", random.randint(180, 300)
-                )
-                # 立即將恐龍設為跳躍狀態以適應重力變化
-                if not self.dinosaur.is_jumping:
-                    self.dinosaur.is_jumping = True
-                    self.dinosaur.jump_speed = (
-                        2 if not self.dinosaur.is_gravity_reversed else -2
-                    )
-                print("⚠️ 重力異常發生！")
+            # 重力異常 - 自動觸發，無需跳躍 - 加入安全檢查
+            if random.randint(1, 400) == 1:
+                # 安全檢查：確保恐龍物件有必要的屬性
+                if hasattr(self.dinosaur, "gravity_reversal_time") and hasattr(
+                    self.dinosaur, "apply_nightmare_effect"
+                ):
+                    # 如果恐龍目前沒有重力反轉效果，立即啟動
+                    if self.dinosaur.gravity_reversal_time <= 0:
+                        self.dinosaur.apply_nightmare_effect(
+                            "gravity_reversal", random.randint(180, 300)
+                        )
+                        # 立即將恐龍設為跳躍狀態以適應重力變化
+                        if not self.dinosaur.is_jumping:
+                            self.dinosaur.is_jumping = True
+                            self.dinosaur.jump_speed = (
+                                2
+                                if not getattr(
+                                    self.dinosaur, "is_gravity_reversed", False
+                                )
+                                else -2
+                            )
+                        print("⚠️ 重力異常發生！")
+        except Exception as effect_error:
+            print(f"⚠️ 噩夢模式效果處理錯誤: {effect_error}")
+            # 不要讓個別效果錯誤影響整個遊戲
 
     def apply_screen_flicker(self):
         """應用螢幕閃爍效果"""
@@ -1022,12 +1044,15 @@ class Game:
                 if self.is_game_starting:
                     self.draw_game_start_flash()
 
-                # 噩夢模式螢幕閃爍
+                # 噩夢模式螢幕閃爍 - 用單獨的 try-catch 保護
                 if (
                     self.selected_difficulty >= Difficulty.NIGHTMARE
                     and self.screen_flicker_duration > 0
                 ):
-                    self.draw_screen_flicker()
+                    try:
+                        self.apply_screen_flicker()
+                    except Exception as flicker_error:
+                        print(f"⚠️ 螢幕閃爍繪製錯誤（已忽略）: {flicker_error}")
 
             # 更新螢幕
             pygame.display.flip()
@@ -1037,8 +1062,11 @@ class Game:
             import traceback
 
             traceback.print_exc()
-            # 返回選單而不是直接退出
-            self.game_state = GameState.MENU
+            # 對於繪製錯誤，不應該返回選單，只記錄錯誤即可
+            # 只有在非常嚴重的錯誤時才返回選單
+            if "display" in str(e).lower() or "surface" in str(e).lower():
+                print("⚠️ 嚴重的顯示錯誤，嘗試恢復...")
+                # 可以嘗試重新初始化顯示或其他恢復措施
 
     def draw_game_info(self):
         """繪製遊戲資訊"""

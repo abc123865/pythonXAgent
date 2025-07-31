@@ -1363,7 +1363,32 @@ class Game:
 
     def draw_playing(self):
         """繪製遊戲畫面"""
-        self.screen.fill(DARK_BLUE)
+        if self.fullscreen:
+            # 全屏模式下，先繪製到虛擬畫布
+            virtual_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.draw_playing_content(virtual_screen)
+            
+            # 縮放並居中顯示虛擬畫布
+            scaled_surface = pygame.transform.scale(
+                virtual_screen, 
+                (int(SCREEN_WIDTH * self.ui_scale), int(SCREEN_HEIGHT * self.ui_scale))
+            )
+            
+            # 計算居中位置
+            offset_x = (self.screen_width - SCREEN_WIDTH * self.ui_scale) // 2
+            offset_y = (self.screen_height - SCREEN_HEIGHT * self.ui_scale) // 2
+            
+            # 清除螢幕並繪製縮放後的畫面
+            self.screen.fill(BLACK)
+            self.screen.blit(scaled_surface, (offset_x, offset_y))
+        else:
+            # 視窗模式直接繪製
+            self.draw_playing_content(self.screen)
+
+    def draw_playing_content(self, screen):
+    def draw_playing_content(self, screen):
+        """繪製遊戲畫面內容"""
+        screen.fill(DARK_BLUE)
 
         if not self.player:
             return
@@ -1375,42 +1400,10 @@ class Game:
 
         # 繪製屏幕邊界牆壁
         wall_width = 10
-        scaled_wall_width, _ = self.scale_size(wall_width)
-        scaled_screen_width = self.screen_width if self.fullscreen else SCREEN_WIDTH
-        scaled_screen_height = self.screen_height if self.fullscreen else SCREEN_HEIGHT
-
-        if self.fullscreen:
-            # 全屏模式下，邊界牆壁在遊戲區域的邊緣
-            offset_x = (self.screen_width - SCREEN_WIDTH * self.ui_scale) // 2
-            offset_y = (self.screen_height - SCREEN_HEIGHT * self.ui_scale) // 2
-            game_width = int(SCREEN_WIDTH * self.ui_scale)
-            game_height = int(SCREEN_HEIGHT * self.ui_scale)
-
-            # 左邊界牆壁
-            pygame.draw.rect(
-                self.screen, GRAY, (offset_x, offset_y, scaled_wall_width, game_height)
-            )
-            # 右邊界牆壁
-            pygame.draw.rect(
-                self.screen,
-                GRAY,
-                (
-                    offset_x + game_width - scaled_wall_width,
-                    offset_y,
-                    scaled_wall_width,
-                    game_height,
-                ),
-            )
-        else:
-            # 視窗模式
-            # 左邊界牆壁
-            pygame.draw.rect(self.screen, GRAY, (0, 0, wall_width, SCREEN_HEIGHT))
-            # 右邊界牆壁
-            pygame.draw.rect(
-                self.screen,
-                GRAY,
-                (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT),
-            )
+        # 左邊界牆壁
+        pygame.draw.rect(screen, GRAY, (0, 0, wall_width, SCREEN_HEIGHT))
+        # 右邊界牆壁
+        pygame.draw.rect(screen, GRAY, (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT))
 
         # 繪製平台
         for platform in level_data["platforms"]:
@@ -1418,36 +1411,35 @@ class Game:
             if platform["y"] <= level_data["goal_y"]:  # 目標平台
                 color = YELLOW
 
-            # 計算平台在螢幕上的位置
-            platform_x, platform_y = self.scale_pos(
-                platform["x"], platform["y"] - self.camera_y
-            )
-            platform_width, platform_height = self.scale_size(
-                platform["width"], platform["height"]
-            )
-
             pygame.draw.rect(
-                self.screen,
+                screen,
                 color,
-                (platform_x, platform_y, platform_width, platform_height),
+                (
+                    platform["x"],
+                    platform["y"] - self.camera_y,
+                    platform["width"],
+                    platform["height"],
+                ),
             )
 
         # 繪製死亡區域
         for zone in level_data["death_zones"]:
-            zone_x, zone_y = self.scale_pos(zone["x"], zone["y"] - self.camera_y)
-            zone_width, zone_height = self.scale_size(zone["width"], zone["height"])
-
             pygame.draw.rect(
-                self.screen,
+                screen,
                 RED,
-                (zone_x, zone_y, zone_width, zone_height),
+                (
+                    zone["x"],
+                    zone["y"] - self.camera_y,
+                    zone["width"],
+                    zone["height"],
+                ),
             )
 
         # 繪製玩家
-        self.draw_player(self.camera_y)
+        self.draw_player_content(screen, self.camera_y)
 
         # 繪製UI
-        self.draw_playing_ui(level_data)
+        self.draw_playing_ui_content(screen, level_data)
 
     def draw_player(self, camera_y):
         """繪製玩家（適應縮放）"""
