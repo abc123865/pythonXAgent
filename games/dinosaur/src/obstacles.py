@@ -82,6 +82,25 @@ class Obstacle:
             self.y = self.ground_height - self.height
             self.color = self.colors["DARK_GREEN"]
 
+        elif self.obstacle_type == "tall_rock":
+            # 高石頭（需要蹲下才能通過）
+            self.width = int(25 * scale_factor)
+            self.height = int(55 * scale_factor)  # 比恐龍高，需要蹲下
+            self.y = self.ground_height - self.height
+            self.color = self.colors["GRAY"]
+
+        elif self.obstacle_type == "hanging_rock":
+            # 懸浮石頭（跳起來會撞到）
+            self.width = int(30 * scale_factor)
+            self.height = int(20 * scale_factor)
+            if is_gravity_reversed:
+                # 重力反轉時，懸浮石頭在地面附近
+                self.y = self.ground_height - int(60 * scale_factor)
+            else:
+                # 正常重力時，懸浮石頭在空中低位置
+                self.y = self.ground_height - int(90 * scale_factor)
+            self.color = self.colors["DARK_GRAY"]
+
         elif self.obstacle_type == "flying":
             # 飛行障礙物（鳥類）
             self.width = int(25 * scale_factor)
@@ -203,6 +222,10 @@ class Obstacle:
             self._draw_flying_obstacle(screen)
         elif self.obstacle_type == "short":
             self._draw_short_obstacle(screen)
+        elif self.obstacle_type == "tall_rock":
+            self._draw_tall_rock(screen)
+        elif self.obstacle_type == "hanging_rock":
+            self._draw_hanging_rock(screen)
         elif self.obstacle_type == "double":
             self._draw_double_obstacle(screen)
         elif self.obstacle_type == "moving_up":
@@ -232,6 +255,51 @@ class Obstacle:
         # 石頭細節
         pygame.draw.circle(screen, self.colors["GREEN"], (self.x + 5, self.y + 5), 3)
         pygame.draw.circle(screen, self.colors["GREEN"], (self.x + 20, self.y + 8), 2)
+
+    def _draw_tall_rock(self, screen):
+        """繪製高石頭（需要蹲下通過）"""
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
+        # 高石頭的紋理
+        for i in range(3):
+            y_offset = i * (self.height // 3)
+            pygame.draw.line(
+                screen,
+                self.colors["WHITE"],
+                (self.x, self.y + y_offset + 5),
+                (self.x + self.width, self.y + y_offset + 5),
+                1,
+            )
+        # 頂部標記
+        pygame.draw.rect(
+            screen, self.colors["DARK_GRAY"], 
+            (self.x + 5, self.y, self.width - 10, 8)
+        )
+
+    def _draw_hanging_rock(self, screen):
+        """繪製懸浮石頭（跳起來會撞到）"""
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
+        # 懸浮效果 - 陰影
+        shadow_y = self.y + self.height + 5
+        pygame.draw.ellipse(
+            screen,
+            self.colors["BLACK"],
+            (self.x + 3, shadow_y, self.width - 6, 8),
+        )
+        # 懸浮石頭的邊框
+        pygame.draw.rect(
+            screen, self.colors["WHITE"], 
+            (self.x, self.y, self.width, self.height), 2
+        )
+        # 危險標記
+        pygame.draw.polygon(
+            screen,
+            self.colors["RED"],
+            [
+                (self.x + self.width // 2, self.y - 8),
+                (self.x + self.width // 2 - 5, self.y - 3),
+                (self.x + self.width // 2 + 5, self.y - 3),
+            ],
+        )
 
     def _draw_double_obstacle(self, screen):
         """繪製雙重障礙物"""
@@ -406,6 +474,9 @@ class Obstacle:
                 return False
             else:
                 return True
+        elif self.obstacle_type == "hanging_rock":
+            # 懸浮石頭可以直接走過（不跳躍的情況下）
+            return True
         return False
 
     def trigger_explosion(self):
@@ -457,17 +528,17 @@ class ObstacleManager:
             if is_gravity_reversed:
                 obstacle_types = ["flying", "short", "normal"]
         elif difficulty == Difficulty.MEDIUM:
-            obstacle_types = ["normal", "tall", "wide", "short", "flying"]
+            obstacle_types = ["normal", "tall", "wide", "short", "flying", "tall_rock"]
             if is_gravity_reversed:
                 obstacle_types = ["flying", "flying", "short", "normal"]
         elif difficulty == Difficulty.HARD:
-            obstacle_types = ["normal", "tall", "wide", "short", "flying", "double"]
+            obstacle_types = ["normal", "tall", "wide", "short", "flying", "double", "tall_rock", "hanging_rock"]
             if is_gravity_reversed:
-                obstacle_types = ["flying", "flying", "double", "short", "normal"]
+                obstacle_types = ["flying", "flying", "double", "short", "normal", "hanging_rock"]
         else:  # NIGHTMARE - 保持簡單但速度極快
-            obstacle_types = ["normal", "tall", "wide", "flying", "double"]
+            obstacle_types = ["normal", "tall", "wide", "flying", "double", "tall_rock", "hanging_rock"]
             if is_gravity_reversed:
-                obstacle_types = ["flying", "flying", "flying", "double", "normal"]
+                obstacle_types = ["flying", "flying", "flying", "double", "normal", "hanging_rock"]
 
         return obstacle_types
 

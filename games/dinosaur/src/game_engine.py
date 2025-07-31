@@ -414,6 +414,15 @@ class Game:
                     self.combo_count += 1
                     self.score += 5
                     continue
+                elif obstacle.obstacle_type == "hanging_rock" and not self.dinosaur.is_jumping:
+                    # 懸浮石頭：不跳躍時可以安全通過
+                    self.combo_count += 1
+                    self.score += 8
+                    continue
+                elif obstacle.obstacle_type == "tall_rock" and self.dinosaur.is_ducking:
+                    # 高石頭：必須蹲下才能通過，不蹲下就死亡
+                    # 蹲下通過不給額外分數，因為這是必須的操作
+                    continue
                 elif obstacle.can_duck_under() and self.dinosaur.is_ducking:
                     self.combo_count += 1
                     self.score += 10

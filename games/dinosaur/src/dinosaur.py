@@ -120,24 +120,45 @@ class Dinosaur:
     def duck(self):
         """蹲下動作"""
         if not self.is_jumping:
-            self.is_ducking = True
-            self.height = int(self.original_height * 0.5)
-            self.y = self.ground_height - self.height
-        elif self.is_jumping:
-            # 在跳躍時按蹲下可以快速下降
             if not self.is_gravity_reversed:
-                # 正常重力時向下快速下降
-                self.jump_speed = max(self.jump_speed, 8)
+                # 正常重力時的蹲下
+                self.is_ducking = True
+                self.height = int(self.original_height * 0.5)
+                self.y = self.ground_height - self.height
             else:
-                # 重力反轉時向上快速移動
-                self.jump_speed = min(self.jump_speed, -8)
+                # 重力反轉時的蹲下（在天花板附近）
+                self.is_ducking = True
+                self.height = int(self.original_height * 0.5)
+                self.y = 50  # 貼近天花板
+        elif self.is_jumping:
+            # 在跳躍時按蹲下立刻回到地面
+            if not self.is_gravity_reversed:
+                # 正常重力時：立刻設置為地面位置並停止跳躍
+                self.y = self.ground_height - self.height
+                self.is_jumping = False
+                self.jump_speed = 0
+                self.is_ducking = True
+                self.height = int(self.original_height * 0.5)
+                self.y = self.ground_height - self.height
+            else:
+                # 重力反轉時：立刻回到天花板位置
+                self.y = 50
+                self.is_jumping = False
+                self.jump_speed = 0
+                self.is_ducking = True
+                self.height = int(self.original_height * 0.5)
 
     def stand_up(self):
         """站起來動作"""
         if not self.is_jumping:
             self.is_ducking = False
             self.height = self.original_height
-            self.y = self.ground_height - self.original_height
+            if not self.is_gravity_reversed:
+                # 正常重力時站在地面
+                self.y = self.ground_height - self.original_height
+            else:
+                # 重力反轉時站在天花板
+                self.y = 50
 
     def update(self):
         """更新恐龍狀態"""

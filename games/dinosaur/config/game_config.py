@@ -93,9 +93,9 @@ DIFFICULTY_SETTINGS = {
 
 # 物理常數
 class Physics:
-    GRAVITY = 0.8
-    JUMP_STRENGTH = -15
-    MAX_FALL_SPEED = 20
+    GRAVITY = 1.2  # 增加重力，從0.8增加到1.2，讓跳躍更快落下
+    JUMP_STRENGTH = -13  # 稍微減少跳躍力度，從-15調整到-13
+    MAX_FALL_SPEED = 25  # 增加最大下降速度，讓下降更快
 
 
 # 字體設定
