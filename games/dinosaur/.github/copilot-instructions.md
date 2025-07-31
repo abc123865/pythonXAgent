@@ -5,11 +5,12 @@
 這是一個模組化的 Pygame 恐龍跳躍遊戲，採用清晰的 MVC 分離設計：
 
 - **`main.py`**: 僅作為入口點，所有遊戲邏輯都在 `src/` 模組中
-- **`game_engine.py`**: 核心協調器，管理遊戲狀態、事件處理、渲染循環
+  - **`game_engine.py`**: 核心協調器，管理遊戲狀態、事件處理、渲染循環、日夜模式、螢幕效果
 - **`dinosaur.py`**: 玩家角色，包含物理系統、技能系統、噩夢模式效果
 - **`obstacles.py`**: 障礙物系統，支援 10+ 種類型（隱形、爆炸、移動等）
 - **`menu_system.py`**: 選單界面，處理難度選擇和 UI 交互
-- **`config/game_config.py`**: 集中式配置，包含所有常數、顏色、難度設定
+- **`sound_manager.py`**: 實時音效系統，支援 Popcat 風格音效合成
+- **`config/game_config.py`**: 集中式配置，包含所有常數、顏色、難度設定、音效參數
 
 ## 關鍵設計模式
 
@@ -35,7 +36,38 @@ self.font_large = pygame.font.Font(FONT_PATH, large_size)
 
 所有中文字串都應正確編碼，UI 文字使用繁體中文。
 
-### 3. 難度系統驅動
+### 3. 實時音效合成系統
+
+`sound_manager.py` 使用 numpy 實現真正的 Popcat 音效合成：
+
+```python
+def generate_popcat_sound(self, base_frequency, duration):
+    # 快速攻擊階段 + 噪音模擬 "p" 音
+    # 指數衰減階段 + 諧波豐富化
+    # 生成立體聲 16-bit 音頻數據
+```
+
+特點：
+
+- 所有按鍵都有對應的音效頻率和時長
+- 支援複合音效（如衝刺的三連音、死亡的五段下降音）
+- 容錯機制：numpy 失敗時回退到簡化版，再失敗時使用系統音效
+- 異步播放避免阻塞遊戲循環
+
+### 4. 日夜循環與視覺適應
+
+分數達到 2000 時自動切換日夜模式：
+
+```python
+def get_background_color(self):
+    if self.score_system.total_score >= 2000:
+        return night_backgrounds[self.selected_difficulty]
+    return day_backgrounds[self.selected_difficulty]
+```
+
+包含文字顏色自動適應，確保在黑色背景下文字可見性。
+
+### 5. 難度系統驅動
 
 遊戲邏輯高度依賴 `DIFFICULTY_SETTINGS` 配置：
 
@@ -43,7 +75,7 @@ self.font_large = pygame.font.Font(FONT_PATH, large_size)
 - 新增功能時考慮不同難度的適配
 - 噩夢模式 (`Difficulty.NIGHTMARE`) 有特殊的視覺和物理效果
 
-### 4. 事件驅動的狀態管理
+### 6. 事件驅動的狀態管理
 
 遊戲使用 `GameState` 枚舉管理狀態轉換：
 
@@ -51,13 +83,57 @@ self.font_large = pygame.font.Font(FONT_PATH, large_size)
 - 每個狀態有獨立的事件處理邏輯
 - 全域快捷鍵（F11、Alt+F4）在所有狀態下生效
 
+### 7. 距離計分系統
+
+`ScoreSystem` 類處理基於距離的計分：
+
+```python
+# 每移動一定距離獲得分數，速度越快分數越高
+distance_score = (distance_interval // DISTANCE_SCORE_INTERVAL) * base_score
+speed_bonus = int(current_speed * speed_multiplier)
+```
+
 ## 技術特殊性
+
+### 音效合成架構
+
+專業級 Popcat 音效生成，結合多層容錯機制：
+
+1. **主要生成器**：numpy 版本
+
+   - 雙階段波形設計（攻擊 + 衰減）
+   - 諧波疊加讓聲音更豐富
+   - 噪音注入模擬爆破音"p"
+
+2. **簡化備案**：純數學版本
+
+   - 不依賴 numpy，使用 Python array
+   - 保持基本的波形包絡
+
+3. **系統備案**：Windows API 音效
+   - 完全失敗時的最後手段
+
+所有音效都異步播放，支援複合序列（如死亡時的五段下降音）。
 
 ### 物理系統
 
 - 支援重力反轉（噩夢模式）：`is_gravity_reversed`
 - 控制反轉機制：跳躍和蹲下鍵位互換
 - 二段跳系統：空中可執行第二次跳躍
+
+### 動態視覺效果
+
+**日夜循環系統**：
+
+- 2000 分時自動切換背景色
+- 文字顏色自動適應背景
+- 不同難度有不同的日夜色調
+
+**噩夢模式特效**：
+
+- 5 秒間隔的螢幕閃爍：`screen_flicker_timer`
+- 隨機強度的白色覆蓋效果
+- 重力反轉和控制反轉
 
 ### 障礙物擴展
 
@@ -76,6 +152,20 @@ screen_offset_x = random.randint(-self.screen_shake, self.screen_shake)
 ```
 
 所有繪製都考慮偏移量，創造動態視覺回饋。
+
+### 計分系統架構
+
+`ScoreSystem` 類統一處理各種計分邏輯：
+
+```python
+class ScoreSystem:
+    def update_distance_score(self, speed):
+        # 基於移動距離的主要計分
+        # 速度越快獲得越多分數
+
+    def add_obstacle_score(self, obstacle_type):
+        # 不同障礙物有不同分數獎勵
+```
 
 ## 開發工作流程
 
@@ -111,4 +201,33 @@ pip install pygame
 - 錯誤處理要考慮 Windows 環境特殊性（字體路徑、編碼等）
 - 新功能必須支援動態螢幕縮放
 
-這個專案的獨特之處在於完整的中文本地化、複雜的難度漸進系統，以及對 Windows 環境的特殊優化。
+## 新功能開發指南
+
+### 音效系統擴展
+
+新增音效時，在 `sound_manager.py` 中：
+
+1. 在 `SoundSystem` 類新增頻率和時長常數
+2. 實作對應的播放方法
+3. 考慮複合音效（如連續播放多個頻率）
+4. 所有音效都使用異步播放
+
+### 視覺效果開發
+
+新增視覺效果時注意：
+
+1. 使用 `scale_factor` 確保螢幕適應性
+2. 考慮日夜模式的顏色適配
+3. 噩夢模式的特殊處理
+4. 效果應該支援開關控制
+
+### 遊戲機制擴展
+
+新增遊戲機制時：
+
+1. 在 `game_config.py` 中定義相關常數
+2. 考慮不同難度的適配
+3. 確保與現有系統的兼容性
+4. 添加適當的音效回饋
+
+這個專案的獨特之處在於完整的中文本地化、複雜的難度漸進系統，以及對 Windows 環境的特殊優化。最新的音效合成系統和視覺效果系統讓遊戲體驗更加豐富和專業。

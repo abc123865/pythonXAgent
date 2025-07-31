@@ -726,7 +726,9 @@ class Game:
             self.screen.fill(current_bg)
 
             # 畫地面
-            ground_color = self.colors["WHITE"] if self.score >= 2000 else self.colors["BLACK"]
+            ground_color = (
+                self.colors["WHITE"] if self.score >= 2000 else self.colors["BLACK"]
+            )
             pygame.draw.line(
                 self.screen,
                 ground_color,
@@ -780,7 +782,9 @@ class Game:
         # 根據日夜模式選擇文字顏色
         is_night_mode = self.score >= 2000
         text_color = self.colors["WHITE"] if is_night_mode else self.colors["BLACK"]
-        accent_color = self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
+        accent_color = (
+            self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
+        )
         special_color = self.colors["PINK"] if is_night_mode else self.colors["PURPLE"]
 
         # 分數顯示
@@ -794,9 +798,7 @@ class Game:
         # 距離顯示
         distance_km = self.total_distance / 1000
         distance_text = f"距離: {distance_km:.1f}km"
-        distance_surface = self.font_small.render(
-            distance_text, True, accent_color
-        )
+        distance_surface = self.font_small.render(distance_text, True, accent_color)
         self.screen.blit(distance_surface, (margin, margin + line_height))
 
         # 最高分顯示
@@ -1004,8 +1006,12 @@ class Game:
 
         # 根據日夜模式選擇文字顏色
         is_night_mode = self.score >= 2000
-        instruction_color = self.colors["WHITE"] if is_night_mode else self.colors["GRAY"]
-        accent_color = self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
+        instruction_color = (
+            self.colors["WHITE"] if is_night_mode else self.colors["GRAY"]
+        )
+        accent_color = (
+            self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
+        )
 
         # 主要操作說明
         instruction_text = (
@@ -1025,9 +1031,7 @@ class Game:
         else:
             obstacles_text = "⚡ 高難度！注意隱形、爆炸、移動障礙物！"
 
-        obstacles_surface = self.font_small.render(
-            obstacles_text, True, accent_color
-        )
+        obstacles_surface = self.font_small.render(obstacles_text, True, accent_color)
         obstacles_rect = obstacles_surface.get_rect(
             center=(center_x, instruction_y + line_spacing)
         )
