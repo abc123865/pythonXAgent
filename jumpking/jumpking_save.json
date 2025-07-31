@@ -1,5 +1,5 @@
 {
-  "unlocked_levels": 5,
+  "unlocked_levels": 4,
   "level_stats": {
     "1": {
       "deaths": 0,
@@ -15,16 +15,6 @@
       "deaths": 1,
       "completed": true,
       "best_deaths": 1
-    },
-    "4": {
-      "deaths": 0,
-      "completed": true,
-      "best_deaths": 0
-    },
-    "5": {
-      "deaths": 18,
-      "completed": false,
-      "best_deaths": null
     }
   }
 }
