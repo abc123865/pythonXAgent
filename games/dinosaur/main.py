@@ -16,6 +16,7 @@
 
 import sys
 import os
+import threading
 
 # 添加 src 目錄到 Python 路徑
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -24,12 +25,53 @@ sys.path.insert(0, src_dir)
 
 from game_engine import Game
 
+# 嘗試導入語音功能
+try:
+    from text_to_speech import TextToSpeech
+    TTS_AVAILABLE = True
+except ImportError:
+    TTS_AVAILABLE = False
+
+
+def speak_intro():
+    """語音播報遊戲介紹"""
+    if not TTS_AVAILABLE:
+        return
+    
+    try:
+        tts = TextToSpeech()
+        if not tts.is_available:
+            return
+        
+        intro_text = """歡迎來到超級進階小恐龍遊戲！
+        這是一個功能豐富的跳躍遊戲，包含四種難度等級。
+        遊戲特色包括動態螢幕適應、進階障礙物系統、恐龍特殊技能等。
+        操作很簡單：使用方向鍵或空白鍵跳躍，Z鍵啟動護盾。
+        準備好挑戰了嗎？讓我們開始遊戲吧！"""
+        
+        print("🔊 正在播放語音介紹...")
+        # 非阻塞播放，不影響遊戲啟動
+        tts.speak(intro_text, blocking=False)
+        
+    except Exception as e:
+        print(f"⚠️ 語音播報失敗: {e}")
+
 
 def main():
     """主程式入口"""
     print("=" * 70)
     print("🦕 超級進階小恐龍遊戲啟動！v2.0 重構版本")
     print("=" * 70)
+    
+    # 啟動語音播報（如果可用）
+    if TTS_AVAILABLE:
+        print("🔊 語音功能已啟用，將播放遊戲介紹")
+        speak_intro()
+    else:
+        print("🔇 語音功能不可用")
+        print("💡 要啟用語音功能，請安裝：pip install pyttsx3")
+        print("   或在 Windows 系統上自動使用系統語音")
+    
     print("🎮 全新特色：")
     print("   • 四種難度等級選擇 - 從簡單到噩夢級")
     print("   • 主選單系統 - 精美的難度選擇介面")

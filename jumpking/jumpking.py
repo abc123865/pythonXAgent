@@ -88,13 +88,18 @@ class Player:
         self.x += self.vel_x
         self.y += self.vel_y
 
+        # 檢查屏幕邊界並反彈
+        self.check_screen_boundaries()
+
         # 檢查死亡區域
         if death_zones:
             for zone in death_zones:
-                if (self.x < zone["x"] + zone["width"] and 
-                    self.x + self.width > zone["x"] and
-                    self.y < zone["y"] + zone["height"] and 
-                    self.y + self.height > zone["y"]):
+                if (
+                    self.x < zone["x"] + zone["width"]
+                    and self.x + self.width > zone["x"]
+                    and self.y < zone["y"] + zone["height"]
+                    and self.y + self.height > zone["y"]
+                ):
                     return "death"
 
         # 檢查平台碰撞
@@ -107,6 +112,22 @@ class Player:
             self.vel_x *= 0.95
 
         return None
+
+    def check_screen_boundaries(self):
+        """檢查屏幕邊界並處理反彈"""
+        wall_width = 10
+
+        # 左邊界（考慮牆壁寬度）
+        if self.x <= wall_width:
+            self.x = wall_width
+            if self.vel_x < 0:  # 只有當玩家向左移動時才反彈
+                self.vel_x = -self.vel_x * 0.7  # 反彈，保持較多速度
+
+        # 右邊界（考慮牆壁寬度）
+        if self.x + self.width >= SCREEN_WIDTH - wall_width:
+            self.x = SCREEN_WIDTH - wall_width - self.width
+            if self.vel_x > 0:  # 只有當玩家向右移動時才反彈
+                self.vel_x = -self.vel_x * 0.7  # 反彈，保持較多速度
 
     def check_platform_collision(self, platforms):
         player_rect = pygame.Rect(self.x, self.y, self.width, self.height)
@@ -140,13 +161,13 @@ class Player:
                     self.y = platform["y"] + platform["height"]
                     self.vel_y = 0
                 elif min_overlap == overlap_left and self.vel_x >= 0:
-                    # 從左側撞擊
+                    # 從左側撞擊平台 - 反彈
                     self.x = platform["x"] - self.width
-                    self.vel_x = 0
+                    self.vel_x = -self.vel_x * 0.4  # 反彈，減少速度
                 elif min_overlap == overlap_right and self.vel_x <= 0:
-                    # 從右側撞擊
+                    # 從右側撞擊平台 - 反彈
                     self.x = platform["x"] + platform["width"]
-                    self.vel_x = 0
+                    self.vel_x = -self.vel_x * 0.4  # 反彈，減少速度
 
         # 簡化地面檢測 - 如果玩家底部接觸任何平台就算在地面上
         if not self.on_ground:
@@ -251,11 +272,11 @@ class Player:
 class LevelManager:
     def __init__(self):
         self.levels = self.create_all_levels()
-    
+
     def create_all_levels(self):
         """創建所有關卡的平台和死亡區域"""
         levels = {}
-        
+
         # 第1關 - 簡單練習
         levels[1] = {
             "name": "初學者之路",
@@ -269,9 +290,9 @@ class LevelManager:
             "death_zones": [],
             "goal_y": 100,
             "start_pos": (100, 500),
-            "target_deaths": 5  # 期望死亡次數
+            "target_deaths": 5,  # 期望死亡次數
         }
-        
+
         # 第2關 - 加入陷阱
         levels[2] = {
             "name": "小心陷阱",
@@ -289,9 +310,9 @@ class LevelManager:
             ],
             "goal_y": 50,
             "start_pos": (100, 500),
-            "target_deaths": 8
+            "target_deaths": 8,
         }
-        
+
         # 第3關 - 精確跳躍
         levels[3] = {
             "name": "精確控制",
@@ -309,9 +330,9 @@ class LevelManager:
             ],
             "goal_y": 100,
             "start_pos": (50, 500),
-            "target_deaths": 12
+            "target_deaths": 12,
         }
-        
+
         # 第4關 - 移動平台(靜態，但位置更難)
         levels[4] = {
             "name": "危險跳躍",
@@ -332,9 +353,9 @@ class LevelManager:
             ],
             "goal_y": 80,
             "start_pos": (50, 500),
-            "target_deaths": 15
+            "target_deaths": 15,
         }
-        
+
         # 第5關 - 中級挑戰
         levels[5] = {
             "name": "中級試煉",
@@ -358,9 +379,9 @@ class LevelManager:
             ],
             "goal_y": 0,
             "start_pos": (40, 500),
-            "target_deaths": 20
+            "target_deaths": 20,
         }
-        
+
         # 第6關 - 高級挑戰
         levels[6] = {
             "name": "高手之路",
@@ -389,9 +410,9 @@ class LevelManager:
             ],
             "goal_y": -40,
             "start_pos": (30, 500),
-            "target_deaths": 30
+            "target_deaths": 30,
         }
-        
+
         # 第7關 - 專家級
         levels[7] = {
             "name": "專家考驗",
@@ -427,9 +448,9 @@ class LevelManager:
             ],
             "goal_y": -30,
             "start_pos": (25, 500),
-            "target_deaths": 50
+            "target_deaths": 50,
         }
-        
+
         # 第8關 - 大師級
         levels[8] = {
             "name": "大師挑戰",
@@ -483,9 +504,9 @@ class LevelManager:
             ],
             "goal_y": -120,
             "start_pos": (20, 500),
-            "target_deaths": 70
+            "target_deaths": 70,
         }
-        
+
         # 第9關 - 傳說級
         levels[9] = {
             "name": "傳說試煉",
@@ -585,9 +606,9 @@ class LevelManager:
             ],
             "goal_y": -180,
             "start_pos": (15, 500),
-            "target_deaths": 90
+            "target_deaths": 90,
         }
-        
+
         # 第10關 - 終極挑戰（需要死100次的超難關卡）
         levels[10] = {
             "name": "絕望深淵",
@@ -644,7 +665,6 @@ class LevelManager:
                 {"x": 740, "y": 310, "width": 5, "height": 2},
                 {"x": 755, "y": 305, "width": 5, "height": 2},
                 {"x": 770, "y": 300, "width": 5, "height": 2},
-                
                 # 更多極窄平台繼續向上...
                 {"x": 785, "y": 295, "width": 5, "height": 2},
                 {"x": 770, "y": 290, "width": 5, "height": 2},
@@ -750,7 +770,6 @@ class LevelManager:
                 {"x": 740, "y": -210, "width": 5, "height": 2},
                 {"x": 755, "y": -215, "width": 5, "height": 2},
                 {"x": 770, "y": -220, "width": 5, "height": 2},
-                
                 # 最終目標平台
                 {"x": 350, "y": -250, "width": 100, "height": 30},
             ],
@@ -812,115 +831,134 @@ class LevelManager:
             ],
             "goal_y": -250,
             "start_pos": (12, 500),
-            "target_deaths": 100
+            "target_deaths": 100,
         }
-        
+
         return levels
-    
+
     def get_level(self, level_num):
         """獲取指定關卡"""
         return self.levels.get(level_num)
+
+
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Jump King - 十關挑戰")
         self.clock = pygame.time.Clock()
         self.running = True
-        
+
         # 遊戲狀態
         self.state = MENU
         self.current_level = 1
-        
+
         # 載入進度
         self.save_file = "jumpking_save.json"
         self.unlocked_levels = 1
         self.level_stats = {}  # 每關的統計資料
         self.load_progress()
-        
+
         # 初始化組件
         self.level_manager = LevelManager()
         self.player = None
         self.camera_y = 0
-        
+
         # 字體 - 使用微軟正黑體支援中文
-        font_path = "C:\\Windows\\Fonts\\msjh.ttc"  # 微軟正黑體
-        try:
-            self.font_large = pygame.font.Font(font_path, 48)
-            self.font_medium = pygame.font.Font(font_path, 36)
-            self.font_small = pygame.font.Font(font_path, 24)
-        except:
-            # 如果載入失敗，使用系統預設字體
+        font_paths = [
+            "C:\\Windows\\Fonts\\msjh.ttc",  # 微軟正黑體
+            "C:\\Windows\\Fonts\\msyh.ttc",  # 微軟雅黑
+            "C:\\Windows\\Fonts\\simsun.ttc",  # 新細明體
+            "C:\\Windows\\Fonts\\kaiu.ttf",  # 標楷體
+        ]
+
+        font_loaded = False
+        for font_path in font_paths:
+            try:
+                self.font_large = pygame.font.Font(font_path, 48)
+                self.font_medium = pygame.font.Font(font_path, 36)
+                self.font_small = pygame.font.Font(font_path, 24)
+                font_loaded = True
+                print(f"成功載入字體: {font_path}")
+                break
+            except:
+                continue
+
+        if not font_loaded:
+            # 如果所有字體都載入失敗，使用系統預設字體
             self.font_large = pygame.font.Font(None, 48)
             self.font_medium = pygame.font.Font(None, 36)
             self.font_small = pygame.font.Font(None, 24)
-        
+            print("使用系統預設字體")
+
         # 選單選項
         self.menu_selection = 0
         self.level_select_selection = 1
-        
+
     def load_progress(self):
         """載入遊戲進度"""
         try:
             if os.path.exists(self.save_file):
-                with open(self.save_file, "r", encoding='utf-8') as f:
+                with open(self.save_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.unlocked_levels = data.get("unlocked_levels", 1)
                     self.level_stats = data.get("level_stats", {})
         except:
             self.unlocked_levels = 1
             self.level_stats = {}
-    
+
     def save_progress(self):
         """儲存遊戲進度"""
         try:
             data = {
                 "unlocked_levels": self.unlocked_levels,
-                "level_stats": self.level_stats
+                "level_stats": self.level_stats,
             }
-            with open(self.save_file, "w", encoding='utf-8') as f:
+            with open(self.save_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except:
             pass
-    
+
     def start_level(self, level_num):
         """開始指定關卡"""
         level_data = self.level_manager.get_level(level_num)
         if not level_data:
             return
-        
+
         self.current_level = level_num
         start_x, start_y = level_data["start_pos"]
         self.player = Player(start_x, start_y)
         self.camera_y = 0
         self.state = PLAYING
-        
+
         # 初始化關卡統計
         if str(level_num) not in self.level_stats:
             self.level_stats[str(level_num)] = {
                 "deaths": 0,
                 "completed": False,
-                "best_deaths": None
+                "best_deaths": None,
             }
-    
+
     def complete_level(self):
         """完成關卡"""
         level_key = str(self.current_level)
         if level_key in self.level_stats:
             self.level_stats[level_key]["completed"] = True
             deaths = self.player.death_count
-            
+
             # 更新最佳記錄
-            if (self.level_stats[level_key]["best_deaths"] is None or 
-                deaths < self.level_stats[level_key]["best_deaths"]):
+            if (
+                self.level_stats[level_key]["best_deaths"] is None
+                or deaths < self.level_stats[level_key]["best_deaths"]
+            ):
                 self.level_stats[level_key]["best_deaths"] = deaths
-        
+
         # 解鎖下一關
         if self.current_level < TOTAL_LEVELS:
             self.unlocked_levels = max(self.unlocked_levels, self.current_level + 1)
-        
+
         self.save_progress()
         self.state = VICTORY
-    
+
     def handle_menu_events(self, event):
         """處理主選單事件"""
         if event.type == pygame.KEYDOWN:
@@ -935,14 +973,16 @@ class Game:
                     # 找到最高未完成關卡
                     level_to_start = 1
                     for i in range(1, self.unlocked_levels + 1):
-                        if (str(i) not in self.level_stats or 
-                            not self.level_stats[str(i)]["completed"]):
+                        if (
+                            str(i) not in self.level_stats
+                            or not self.level_stats[str(i)]["completed"]
+                        ):
                             level_to_start = i
                             break
                     self.start_level(level_to_start)
                 elif self.menu_selection == 2:  # 退出
                     self.running = False
-    
+
     def handle_level_select_events(self, event):
         """處理關卡選擇事件"""
         if event.type == pygame.KEYDOWN:
@@ -956,7 +996,7 @@ class Game:
                 self.start_level(self.level_select_selection)
             elif event.key == pygame.K_ESCAPE:
                 self.state = MENU
-    
+
     def handle_playing_events(self, event):
         """處理遊戲中的事件"""
         if event.type == pygame.KEYDOWN:
@@ -977,7 +1017,7 @@ class Game:
                     self.player.execute_jump("right")
                 else:
                     self.player.execute_jump("up")
-    
+
     def handle_events(self):
         """處理事件"""
         for event in pygame.event.get():
@@ -997,63 +1037,97 @@ class Game:
                             self.state = LEVEL_SELECT
                         elif event.key == pygame.K_ESCAPE:
                             self.state = MENU
-    
+
+    def check_goal_completion(self, level_data):
+        """檢查玩家是否踩在目標平台上"""
+        if not self.player or not self.player.on_ground:
+            return False
+
+        # 找到目標平台（黃色平台）
+        goal_platforms = []
+        for platform in level_data["platforms"]:
+            if platform["y"] <= level_data["goal_y"]:
+                goal_platforms.append(platform)
+
+        # 檢查玩家是否踩在任何目標平台上
+        player_rect = pygame.Rect(
+            self.player.x, self.player.y, self.player.width, self.player.height
+        )
+
+        for platform in goal_platforms:
+            platform_rect = pygame.Rect(
+                platform["x"], platform["y"], platform["width"], platform["height"]
+            )
+
+            # 檢查玩家底部是否接觸平台頂部
+            if (
+                self.player.x < platform["x"] + platform["width"]
+                and self.player.x + self.player.width > platform["x"]
+                and abs((self.player.y + self.player.height) - platform["y"]) <= 3
+                and self.player.on_ground
+            ):
+                return True
+
+        return False
+
     def update_playing(self):
         """更新遊戲中的邏輯"""
         if not self.player:
             return
-        
+
         # 更新跳躍蓄力
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
             self.player.update_jump_charge()
-        
+
         # 獲取當前關卡資料
         level_data = self.level_manager.get_level(self.current_level)
         if not level_data:
             return
-        
+
         # 更新玩家
         result = self.player.update(level_data["platforms"], level_data["death_zones"])
-        
+
         # 檢查死亡
         if result == "death":
             self.player.reset_position()
-            self.level_stats[str(self.current_level)]["deaths"] = self.player.death_count
+            self.level_stats[str(self.current_level)][
+                "deaths"
+            ] = self.player.death_count
             self.save_progress()
-        
+
         # 更新相機
         self.update_camera()
-        
-        # 檢查是否到達目標
-        if self.player.y <= level_data["goal_y"]:
+
+        # 檢查是否完成關卡（必須踩在目標平台上）
+        if self.check_goal_completion(level_data):
             self.complete_level()
-    
+
     def update_camera(self):
         """更新相機位置"""
         if self.player:
             target_y = self.player.y - SCREEN_HEIGHT // 2
             self.camera_y += (target_y - self.camera_y) * 0.1
-    
+
     def update(self):
         """更新遊戲邏輯"""
         if self.state == PLAYING:
             self.update_playing()
-    
+
     def draw_menu(self):
         """繪製主選單"""
         self.screen.fill(DARK_BLUE)
-        
+
         # 標題
         title = self.font_large.render("Jump King - 十關挑戰", True, YELLOW)
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.screen.blit(title, title_rect)
-        
+
         # 副標題
         subtitle = self.font_medium.render("考驗你的耐心與技巧", True, WHITE)
         subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.screen.blit(subtitle, subtitle_rect)
-        
+
         # 選單選項
         menu_options = ["開始遊戲", "繼續遊戲", "退出遊戲"]
         for i, option in enumerate(menu_options):
@@ -1061,51 +1135,50 @@ class Game:
             text = self.font_medium.render(option, True, color)
             text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 300 + i * 50))
             self.screen.blit(text, text_rect)
-        
+
         # 進度資訊
         progress_text = f"已解鎖關卡: {self.unlocked_levels}/{TOTAL_LEVELS}"
         progress = self.font_small.render(progress_text, True, GREEN)
         progress_rect = progress.get_rect(center=(SCREEN_WIDTH // 2, 500))
         self.screen.blit(progress, progress_rect)
-        
+
         # 操作說明
-        controls = [
-            "↑↓ 選擇",
-            "Enter 確認",
-            "ESC 退出"
-        ]
+        controls = ["↑↓ 選擇", "Enter 確認", "ESC 退出"]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
             self.screen.blit(text, (50, 500 + i * 25))
-    
+
     def draw_level_select(self):
         """繪製關卡選擇畫面"""
         self.screen.fill(DARK_BLUE)
-        
+
         # 標題
         title = self.font_large.render("選擇關卡", True, YELLOW)
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
         self.screen.blit(title, title_rect)
-        
+
         # 關卡選項
         start_x = 50
         start_y = 200
         cols = 5
         rows = 2
-        
+
         for level in range(1, TOTAL_LEVELS + 1):
             row = (level - 1) // cols
             col = (level - 1) % cols
             x = start_x + col * 140
             y = start_y + row * 120
-            
+
             # 判斷關卡狀態
             if level > self.unlocked_levels:
                 # 未解鎖
                 color = GRAY
                 text_color = BLACK
                 status = "鎖定"
-            elif str(level) in self.level_stats and self.level_stats[str(level)]["completed"]:
+            elif (
+                str(level) in self.level_stats
+                and self.level_stats[str(level)]["completed"]
+            ):
                 # 已完成
                 color = GREEN
                 text_color = WHITE
@@ -1117,70 +1190,81 @@ class Game:
                 text_color = WHITE
                 deaths = self.level_stats.get(str(level), {}).get("deaths", 0)
                 status = f"進行中\n{deaths}死"
-            
+
             # 選中的關卡
             if level == self.level_select_selection:
-                pygame.draw.rect(self.screen, YELLOW, (x-5, y-5, 110, 90), 3)
-            
+                pygame.draw.rect(self.screen, YELLOW, (x - 5, y - 5, 110, 90), 3)
+
             # 關卡方塊
             pygame.draw.rect(self.screen, color, (x, y, 100, 80))
-            
+
             # 關卡編號
             level_text = self.font_medium.render(f"第{level}關", True, text_color)
             level_rect = level_text.get_rect(center=(x + 50, y + 20))
             self.screen.blit(level_text, level_rect)
-            
+
             # 關卡名稱
             level_data = self.level_manager.get_level(level)
             if level_data:
                 name_text = self.font_small.render(level_data["name"], True, text_color)
                 name_rect = name_text.get_rect(center=(x + 50, y + 40))
                 self.screen.blit(name_text, name_rect)
-            
+
             # 狀態
-            for i, line in enumerate(status.split('\n')):
+            for i, line in enumerate(status.split("\n")):
                 status_text = self.font_small.render(line, True, text_color)
                 status_rect = status_text.get_rect(center=(x + 50, y + 55 + i * 12))
                 self.screen.blit(status_text, status_rect)
-        
+
         # 關卡詳情
         if 1 <= self.level_select_selection <= TOTAL_LEVELS:
             level_data = self.level_manager.get_level(self.level_select_selection)
             if level_data:
                 detail_y = 450
-                
+
                 # 關卡名稱
-                name = self.font_medium.render(f"第{self.level_select_selection}關: {level_data['name']}", True, YELLOW)
+                name = self.font_medium.render(
+                    f"第{self.level_select_selection}關: {level_data['name']}",
+                    True,
+                    YELLOW,
+                )
                 name_rect = name.get_rect(center=(SCREEN_WIDTH // 2, detail_y))
                 self.screen.blit(name, name_rect)
-                
+
                 # 目標死亡次數
-                target = self.font_small.render(f"挑戰目標: {level_data['target_deaths']}次死亡內完成", True, WHITE)
+                target = self.font_small.render(
+                    f"挑戰目標: {level_data['target_deaths']}次死亡內完成", True, WHITE
+                )
                 target_rect = target.get_rect(center=(SCREEN_WIDTH // 2, detail_y + 30))
                 self.screen.blit(target, target_rect)
-        
+
         # 操作說明
-        controls = [
-            "← → 選擇關卡",
-            "Enter 開始",
-            "ESC 返回"
-        ]
+        controls = ["← → 選擇關卡", "Enter 開始", "ESC 返回"]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
             self.screen.blit(text, (50, 550 + i * 20))
-    
+
     def draw_playing(self):
         """繪製遊戲畫面"""
         self.screen.fill(DARK_BLUE)
-        
+
         if not self.player:
             return
-        
+
         # 獲取當前關卡資料
         level_data = self.level_manager.get_level(self.current_level)
         if not level_data:
             return
-        
+
+        # 繪製屏幕邊界牆壁
+        wall_width = 10
+        # 左邊界牆壁
+        pygame.draw.rect(self.screen, GRAY, (0, 0, wall_width, SCREEN_HEIGHT))
+        # 右邊界牆壁
+        pygame.draw.rect(
+            self.screen, GRAY, (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT)
+        )
+
         # 繪製平台
         for platform in level_data["platforms"]:
             color = BROWN
@@ -1196,7 +1280,7 @@ class Game:
                     platform["height"],
                 ),
             )
-        
+
         # 繪製死亡區域
         for zone in level_data["death_zones"]:
             pygame.draw.rect(
@@ -1209,114 +1293,115 @@ class Game:
                     zone["height"],
                 ),
             )
-        
+
         # 繪製玩家
         self.player.draw(self.screen, self.camera_y)
-        
+
         # 繪製UI
         self.draw_playing_ui(level_data)
-    
+
     def draw_playing_ui(self, level_data):
         """繪製遊戲中的UI"""
         # 關卡資訊
         level_text = f"第{self.current_level}關: {level_data['name']}"
         text = self.font_medium.render(level_text, True, YELLOW)
         self.screen.blit(text, (10, 10))
-        
+
         # 死亡次數
         deaths_text = f"死亡次數: {self.player.death_count}"
         text = self.font_small.render(deaths_text, True, WHITE)
         self.screen.blit(text, (10, 45))
-        
+
         # 目標
         target_text = f"目標: {level_data['target_deaths']}次內完成"
-        color = GREEN if self.player.death_count <= level_data['target_deaths'] else RED
+        color = GREEN if self.player.death_count <= level_data["target_deaths"] else RED
         text = self.font_small.render(target_text, True, color)
         self.screen.blit(text, (10, 70))
-        
+
         # 高度
         height = max(0, int((level_data["start_pos"][1] - self.player.y) / 10))
         height_text = f"高度: {height}m"
         text = self.font_small.render(height_text, True, WHITE)
         self.screen.blit(text, (SCREEN_WIDTH - 150, 10))
-        
+
         # 控制說明
         controls = [
             "按住 SPACE 蓄力",
             "蓄力時按 ← → 選方向",
             "放開 SPACE 跳躍",
             "R 重置位置",
-            "ESC 返回選單"
+            "ESC 返回選單",
+            "撞牆會反彈！",
         ]
-        
+
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, WHITE)
             self.screen.blit(text, (10, SCREEN_HEIGHT - 140 + i * 20))
-        
+
         # 玩家狀態
         status_text = f"在地面: {'是' if self.player.on_ground else '否'}"
         color = GREEN if self.player.on_ground else RED
         text = self.font_small.render(status_text, True, color)
         self.screen.blit(text, (SCREEN_WIDTH - 150, 35))
-        
+
         # 蓄力狀態
         if self.player.jump_charging:
             charge_text = f"蓄力: {self.player.jump_power:.1f}"
             text = self.font_small.render(charge_text, True, YELLOW)
             self.screen.blit(text, (SCREEN_WIDTH - 150, 60))
-    
+
     def draw_victory(self):
         """繪製勝利畫面"""
         self.screen.fill(DARK_BLUE)
-        
+
         # 勝利訊息
         title = self.font_large.render("恭喜過關！", True, YELLOW)
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.screen.blit(title, title_rect)
-        
+
         # 統計資料
         level_data = self.level_manager.get_level(self.current_level)
         if level_data:
             deaths = self.player.death_count
-            target = level_data['target_deaths']
-            
+            target = level_data["target_deaths"]
+
             stats_text = f"第{self.current_level}關: {level_data['name']}"
             text = self.font_medium.render(stats_text, True, WHITE)
             text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 280))
             self.screen.blit(text, text_rect)
-            
+
             deaths_text = f"死亡次數: {deaths}"
             color = GREEN if deaths <= target else RED
             text = self.font_medium.render(deaths_text, True, color)
             text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 320))
             self.screen.blit(text, text_rect)
-            
+
             target_text = f"目標: {target}次"
             text = self.font_medium.render(target_text, True, WHITE)
             text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 360))
             self.screen.blit(text, text_rect)
-            
+
             if deaths <= target:
                 perfect_text = "挑戰成功！"
                 text = self.font_medium.render(perfect_text, True, GREEN)
                 text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 400))
                 self.screen.blit(text, text_rect)
-        
+
         # 操作說明
         if self.current_level < TOTAL_LEVELS:
             continue_text = "Enter 繼續下一關"
         else:
             continue_text = "你已完成所有關卡！"
-        
+
         text = self.font_small.render(continue_text, True, WHITE)
         text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 480))
         self.screen.blit(text, text_rect)
-        
+
         back_text = "ESC 返回主選單"
         text = self.font_small.render(back_text, True, WHITE)
         text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 510))
         self.screen.blit(text, text_rect)
-    
+
     def draw(self):
         """繪製畫面"""
         if self.state == MENU:
@@ -1327,9 +1412,9 @@ class Game:
             self.draw_playing()
         elif self.state == VICTORY:
             self.draw_victory()
-        
+
         pygame.display.flip()
-    
+
     def run(self):
         """主遊戲循環"""
         while self.running:
@@ -1337,7 +1422,7 @@ class Game:
             self.update()
             self.draw()
             self.clock.tick(FPS)
-        
+
         pygame.quit()
 
 

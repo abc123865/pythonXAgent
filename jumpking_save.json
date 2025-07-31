@@ -1,1 +1,15 @@
-{"player_x": 470.0, "player_y": -98.4845356715714, "highest_y": -98.4845356715714}
+{
+  "unlocked_levels": 2,
+  "level_stats": {
+    "1": {
+      "deaths": 0,
+      "completed": true,
+      "best_deaths": 0
+    },
+    "2": {
+      "deaths": 4,
+      "completed": false,
+      "best_deaths": null
+    }
+  }
+}

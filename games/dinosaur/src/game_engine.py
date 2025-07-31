@@ -111,7 +111,7 @@ class Game:
         self.transition_speed = 0.02  # 每幀的轉換速度
         self.current_cycle = 0  # 當前的日夜週期
         self.is_transitioning = False  # 是否正在轉換
-        
+
         # 遊戲開始視覺反饋
         self.game_start_flash_timer = 0
         self.game_start_flash_duration = 90  # 1.5秒的閃爍提示
@@ -237,11 +237,11 @@ class Game:
         self.screen_flicker_timer = 0
         self.screen_flicker_duration = 0
         self.next_flicker_time = random.randint(120, 480)  # 隨機 2-8秒
-        
+
         # 啟動遊戲開始視覺反饋
         self.is_game_starting = True
         self.game_start_flash_timer = 0
-        
+
         # 播放遊戲開始音效
         self.sound_manager.play_game_start_sound()
 
@@ -431,7 +431,7 @@ class Game:
                 if self.game_start_flash_timer >= self.game_start_flash_duration:
                     self.is_game_starting = False
                     self.game_start_flash_timer = 0
-            
+
             if not self.game_over:
                 # 噩夢模式的特殊效果
                 if self.selected_difficulty >= Difficulty.NIGHTMARE:
@@ -710,64 +710,71 @@ class Game:
         """繪製遊戲開始的閃爍效果"""
         # 計算閃爍進度 (0-1)
         flash_progress = self.game_start_flash_timer / self.game_start_flash_duration
-        
+
         # 使用正弦波創造平滑的脈衝效果
         import math
+
         pulse_intensity = (math.sin(flash_progress * math.pi * 6) + 1) / 2
-        
+
         # 從強烈開始逐漸減弱
         fade_factor = 1 - flash_progress
         final_intensity = pulse_intensity * fade_factor
-        
+
         # 創建彩色邊框閃爍效果
         if final_intensity > 0.1:
             border_width = int(20 * final_intensity)
             alpha = int(150 * final_intensity)
-            
+
             # 彩色邊框 - 使用綠色表示開始
             for i in range(border_width):
                 color_intensity = 1 - (i / border_width)
                 green_value = int(255 * color_intensity * final_intensity)
                 border_color = (0, green_value, int(green_value * 0.5))
-                
+
                 # 畫邊框矩形
                 pygame.draw.rect(
                     self.screen,
                     border_color,
                     (i, i, self.screen_width - i * 2, self.screen_height - i * 2),
-                    2
+                    2,
                 )
-            
+
             # 中央文字提示
             if flash_progress < 0.8:  # 前80%時間顯示文字
                 center_x = self.screen_width // 2
                 center_y = self.screen_height // 3
-                
+
                 # 根據難度顯示不同的開始文字
                 difficulty_names = {
                     Difficulty.EASY: "🌟 簡單模式開始！",
-                    Difficulty.MEDIUM: "⚡ 中等模式開始！", 
+                    Difficulty.MEDIUM: "⚡ 中等模式開始！",
                     Difficulty.HARD: "🔥 困難模式開始！",
-                    Difficulty.NIGHTMARE: "💀 噩夢模式開始！"
+                    Difficulty.NIGHTMARE: "💀 噩夢模式開始！",
                 }
-                
-                start_text = difficulty_names.get(self.selected_difficulty, "🎮 遊戲開始！")
+
+                start_text = difficulty_names.get(
+                    self.selected_difficulty, "🎮 遊戲開始！"
+                )
                 text_alpha = int(255 * (1 - flash_progress / 0.8))
-                
+
                 # 創建文字表面
                 text_surface = self.font_large.render(start_text, True, (0, 255, 0))
                 text_surface.set_alpha(text_alpha)
-                
+
                 # 居中顯示
                 text_rect = text_surface.get_rect(center=(center_x, center_y))
                 self.screen.blit(text_surface, text_rect)
-                
+
                 # 添加副標題
                 subtitle_text = "準備好了嗎？"
                 subtitle_alpha = int(200 * (1 - flash_progress / 0.8))
-                subtitle_surface = self.font_medium.render(subtitle_text, True, (255, 255, 255))
+                subtitle_surface = self.font_medium.render(
+                    subtitle_text, True, (255, 255, 255)
+                )
                 subtitle_surface.set_alpha(subtitle_alpha)
-                subtitle_rect = subtitle_surface.get_rect(center=(center_x, center_y + 50))
+                subtitle_rect = subtitle_surface.get_rect(
+                    center=(center_x, center_y + 50)
+                )
                 self.screen.blit(subtitle_surface, subtitle_rect)
 
     def get_background_color(self):
@@ -979,7 +986,7 @@ class Game:
             # 遊戲結束畫面
             if self.game_over:
                 self.draw_game_over_screen()
-            
+
             # 遊戲開始閃爍效果
             if self.is_game_starting and self.game_start_flash_timer > 0:
                 self.draw_game_start_flash()
