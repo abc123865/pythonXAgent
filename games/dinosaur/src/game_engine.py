@@ -100,6 +100,12 @@ class Game:
         self.screen_flicker_duration = 0
         self.next_flicker_time = 0
 
+        # 日夜轉換動畫效果
+        self.transition_progress = 0  # 0-1之間，0=完全白天，1=完全夜晚
+        self.transition_speed = 0.02  # 每幀的轉換速度
+        self.current_cycle = 0  # 當前的日夜週期
+        self.is_transitioning = False  # 是否正在轉換
+
         print("🎮 遊戲引擎初始化完成")
 
     def setup_display(self):
@@ -220,6 +226,11 @@ class Game:
         self.screen_flicker_timer = 0
         self.screen_flicker_duration = 0
         self.next_flicker_time = 300  # 5秒 (60FPS * 5)
+
+        # 重置日夜轉換效果
+        self.transition_progress = 0
+        self.current_cycle = 0
+        self.is_transitioning = False
 
         # 重置距離追蹤
         self.total_distance = 0
@@ -365,6 +376,9 @@ class Game:
                 # 更新距離和分數
                 self.update_distance_and_score()
 
+                # 更新日夜轉換效果
+                self.update_day_night_transition()
+
                 # 增加遊戲速度
                 self.speed_increase_timer += 1
                 speed_increase_interval = max(120, 600 - self.selected_difficulty * 80)
@@ -459,6 +473,46 @@ class Game:
 
         # 限制最大倍數
         return min(multiplier, ScoreSystem.MAX_SPEED_MULTIPLIER)
+
+    def update_day_night_transition(self):
+        """更新日夜轉換動畫效果"""
+        if self.game_over:
+            return
+
+        # 計算目標的日夜週期
+        target_cycle = self.score // 2000
+
+        # 檢查是否需要開始新的轉換
+        if target_cycle != self.current_cycle:
+            if not self.is_transitioning:
+                self.is_transitioning = True
+                print(
+                    f"🌅 開始日夜轉換動畫：週期 {self.current_cycle} → {target_cycle}"
+                )
+
+        # 處理轉換動畫
+        if self.is_transitioning:
+            # 計算轉換方向
+            target_is_night = (target_cycle % 2) == 1
+            current_is_night = (self.current_cycle % 2) == 1
+
+            if target_is_night and not current_is_night:
+                # 白天→夜晚：增加轉換進度
+                self.transition_progress += self.transition_speed
+                if self.transition_progress >= 1.0:
+                    self.transition_progress = 1.0
+                    self.current_cycle = target_cycle
+                    self.is_transitioning = False
+                    print("🌙 轉換完成：進入夜晚模式")
+
+            elif not target_is_night and current_is_night:
+                # 夜晚→白天：減少轉換進度
+                self.transition_progress -= self.transition_speed
+                if self.transition_progress <= 0.0:
+                    self.transition_progress = 0.0
+                    self.current_cycle = target_cycle
+                    self.is_transitioning = False
+                    print("☀️ 轉換完成：進入白天模式")
 
     def calculate_obstacle_score(self, base_score):
         """計算障礙物分數（包含速度和難度獎勵）"""
@@ -582,26 +636,53 @@ class Game:
                     self.screen.blit(stripe_surface, (0, i * stripe_height))
 
     def get_background_color(self):
-        """根據分數和難度計算背景顏色 (日夜反轉效果)"""
-        # 分數達到2000時進入夜晚模式
-        if self.score >= 2000:
-            # 夜晚模式：黑色背景，根據難度調整亮度
-            night_colors = {
-                Difficulty.EASY: self.colors["BLACK"],
-                Difficulty.MEDIUM: (20, 20, 20),
-                Difficulty.HARD: (40, 40, 40),
-                Difficulty.NIGHTMARE: (60, 60, 60),
-            }
-            return night_colors.get(self.selected_difficulty, self.colors["BLACK"])
+        """根據分數和難度計算背景顏色 (平滑的日夜轉換效果)"""
+        # 定義白天和夜晚的顏色
+        day_colors = {
+            Difficulty.EASY: self.colors["WHITE"],
+            Difficulty.MEDIUM: (250, 250, 250),
+            Difficulty.HARD: (240, 240, 240),
+            Difficulty.NIGHTMARE: (200, 200, 200),
+        }
+
+        night_colors = {
+            Difficulty.EASY: self.colors["BLACK"],
+            Difficulty.MEDIUM: (20, 20, 20),
+            Difficulty.HARD: (40, 40, 40),
+            Difficulty.NIGHTMARE: (60, 60, 60),
+        }
+
+        day_color = day_colors.get(self.selected_difficulty, self.colors["WHITE"])
+        night_color = night_colors.get(self.selected_difficulty, self.colors["BLACK"])
+
+        # 使用轉換進度來混合顏色
+        if self.transition_progress <= 0:
+            return day_color
+        elif self.transition_progress >= 1:
+            return night_color
         else:
-            # 白天模式：原本的背景色
-            day_colors = {
-                Difficulty.EASY: self.colors["WHITE"],
-                Difficulty.MEDIUM: (250, 250, 250),
-                Difficulty.HARD: (240, 240, 240),
-                Difficulty.NIGHTMARE: (200, 200, 200),
-            }
-            return day_colors.get(self.selected_difficulty, self.colors["WHITE"])
+            # 線性插值混合顏色
+            return self.lerp_color(day_color, night_color, self.transition_progress)
+
+    def lerp_color(self, color1, color2, t):
+        """線性插值兩個顏色
+
+        Args:
+            color1: 起始顏色 (r, g, b)
+            color2: 目標顏色 (r, g, b)
+            t: 插值參數 (0-1)
+
+        Returns:
+            tuple: 插值後的顏色 (r, g, b)
+        """
+        r1, g1, b1 = color1
+        r2, g2, b2 = color2
+
+        r = int(r1 + (r2 - r1) * t)
+        g = int(g1 + (g2 - g1) * t)
+        b = int(b1 + (b2 - b1) * t)
+
+        return (r, g, b)
 
     def spawn_cloud(self):
         """生成雲朵"""
@@ -726,9 +807,16 @@ class Game:
             self.screen.fill(current_bg)
 
             # 畫地面
-            ground_color = (
-                self.colors["WHITE"] if self.score >= 2000 else self.colors["BLACK"]
-            )
+            # 使用轉換進度來決定地面顏色
+            if self.transition_progress <= 0:
+                ground_color = self.colors["BLACK"]  # 白天時地面是黑色
+            elif self.transition_progress >= 1:
+                ground_color = self.colors["WHITE"]  # 夜晚時地面是白色
+            else:
+                # 平滑轉換地面顏色
+                ground_color = self.lerp_color(
+                    self.colors["BLACK"], self.colors["WHITE"], self.transition_progress
+                )
             pygame.draw.line(
                 self.screen,
                 ground_color,
@@ -779,19 +867,48 @@ class Game:
         margin = int(self.screen_width * 0.0125)
         line_height = int(self.screen_height * 0.04)
 
-        # 根據日夜模式選擇文字顏色
-        is_night_mode = self.score >= 2000
-        text_color = self.colors["WHITE"] if is_night_mode else self.colors["BLACK"]
-        accent_color = (
-            self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
-        )
-        special_color = self.colors["PINK"] if is_night_mode else self.colors["PURPLE"]
+        # 根據日夜轉換進度選擇文字顏色
+        if self.transition_progress <= 0:
+            # 白天模式
+            text_color = self.colors["BLACK"]
+            accent_color = self.colors["BLUE"]
+            special_color = self.colors["PURPLE"]
+        elif self.transition_progress >= 1:
+            # 夜晚模式
+            text_color = self.colors["WHITE"]
+            accent_color = self.colors["LIGHT_BLUE"]
+            special_color = self.colors["PINK"]
+        else:
+            # 轉換中，混合顏色
+            text_color = self.lerp_color(
+                self.colors["BLACK"], self.colors["WHITE"], self.transition_progress
+            )
+            accent_color = self.lerp_color(
+                self.colors["BLUE"], self.colors["LIGHT_BLUE"], self.transition_progress
+            )
+            special_color = self.lerp_color(
+                self.colors["PURPLE"], self.colors["PINK"], self.transition_progress
+            )
 
         # 分數顯示
         score_text = f"分數: {self.score}"
-        if is_night_mode and self.score == 2000:
-            # 第一次達到2000分時特殊提示
+
+        # 檢查是否在轉換期間顯示特殊訊息
+        if self.is_transitioning:
+            target_cycle = self.score // 2000
+            target_is_night = (target_cycle % 2) == 1
+            if target_is_night:
+                score_text += " 🌙→ 轉入夜晚"
+            else:
+                score_text += " ☀️→ 轉入白天"
+        elif self.transition_progress >= 1.0 and self.score % 2000 < 100:
             score_text += " 🌙 夜晚模式"
+        elif (
+            self.transition_progress <= 0.0
+            and self.score % 2000 < 100
+            and self.score >= 2000
+        ):
+            score_text += " ☀️ 白天模式"
         score_surface = self.font_medium.render(score_text, True, text_color)
         self.screen.blit(score_surface, (margin, margin))
 
@@ -1004,14 +1121,23 @@ class Game:
         instruction_y = int(self.screen_height * 0.15)
         line_spacing = int(self.screen_height * 0.04)
 
-        # 根據日夜模式選擇文字顏色
-        is_night_mode = self.score >= 2000
-        instruction_color = (
-            self.colors["WHITE"] if is_night_mode else self.colors["GRAY"]
-        )
-        accent_color = (
-            self.colors["LIGHT_BLUE"] if is_night_mode else self.colors["BLUE"]
-        )
+        # 根據日夜轉換進度選擇文字顏色
+        if self.transition_progress <= 0:
+            # 白天模式
+            instruction_color = self.colors["GRAY"]
+            accent_color = self.colors["BLUE"]
+        elif self.transition_progress >= 1:
+            # 夜晚模式
+            instruction_color = self.colors["WHITE"]
+            accent_color = self.colors["LIGHT_BLUE"]
+        else:
+            # 轉換中，混合顏色
+            instruction_color = self.lerp_color(
+                self.colors["GRAY"], self.colors["WHITE"], self.transition_progress
+            )
+            accent_color = self.lerp_color(
+                self.colors["BLUE"], self.colors["LIGHT_BLUE"], self.transition_progress
+            )
 
         # 主要操作說明
         instruction_text = (

@@ -56,16 +56,25 @@ def generate_popcat_sound(self, base_frequency, duration):
 
 ### 4. 日夜循環與視覺適應
 
-分數達到 2000 時自動切換日夜模式：
+每 2000 分自動切換日夜模式，包含平滑的淡入淡出動畫：
 
 ```python
-def get_background_color(self):
-    if self.score_system.total_score >= 2000:
-        return night_backgrounds[self.selected_difficulty]
-    return day_backgrounds[self.selected_difficulty]
+def update_day_night_transition(self):
+    # 檢測週期變化並啟動轉換動畫
+    # 使用 transition_progress (0-1) 控制轉換進度
+    # 平滑的顏色插值實現淡入淡出效果
+
+def lerp_color(self, color1, color2, t):
+    # 線性插值混合兩個顏色
+    # 用於背景、文字、UI元素的平滑轉換
 ```
 
-包含文字顏色自動適應，確保在黑色背景下文字可見性。
+特點：
+
+- 平滑的背景顏色轉換，避免突兀的切換
+- 文字顏色自動適應，確保在任何轉換階段都可見
+- 轉換過程中的視覺提示（"🌙→ 轉入夜晚"）
+- 不同難度有不同的日夜色調變化
 
 ### 5. 難度系統驅動
 
@@ -125,9 +134,11 @@ speed_bonus = int(current_speed * speed_multiplier)
 
 **日夜循環系統**：
 
-- 2000 分時自動切換背景色
-- 文字顏色自動適應背景
-- 不同難度有不同的日夜色調
+- 每 2000 分進行一次日夜顛倒
+- 平滑的淡入淡出轉換動畫（`transition_progress`）
+- 線性插值顏色混合（`lerp_color`）
+- 文字和 UI 元素的動態顏色適應
+- 轉換過程中的視覺回饋提示
 
 **噩夢模式特效**：
 
