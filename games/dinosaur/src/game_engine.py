@@ -20,6 +20,7 @@ from config.game_config import (
     DIFFICULTY_SETTINGS,
     get_color_palette,
     FONT_PATH,
+    ScoreSystem,
 )
 from dinosaur import Dinosaur
 from obstacles import ObstacleManager
@@ -80,6 +81,11 @@ class Game:
         self.speed_increase_timer = 0
         self.obstacle_spawn_rate = 1.0
         self.speed_increase_rate = 0.1
+
+        # 距離追蹤系統
+        self.total_distance = 0
+        self.distance_score_accumulator = 0
+        self.last_speed_bonus_score = 0
 
         # 遊戲效果
         self.combo_count = 0
@@ -201,6 +207,11 @@ class Game:
         self.screen_shake = 0
         self.speed_increase_timer = 0
 
+        # 重置距離追蹤
+        self.total_distance = 0
+        self.distance_score_accumulator = 0
+        self.last_speed_bonus_score = 0
+
         # 根據難度設定遊戲參數
         settings = DIFFICULTY_SETTINGS[difficulty]
         self.game_speed = settings["game_speed"]
@@ -316,6 +327,9 @@ class Game:
                 # 更新恐龍
                 self.dinosaur.update()
 
+                # 更新距離和分數
+                self.update_distance_and_score()
+
                 # 增加遊戲速度
                 self.speed_increase_timer += 1
                 speed_increase_interval = max(120, 600 - self.selected_difficulty * 80)
@@ -350,6 +364,81 @@ class Game:
             # 減少螢幕震動
             if self.screen_shake > 0:
                 self.screen_shake -= 1
+
+    def update_distance_and_score(self):
+        """更新距離追蹤和分數系統"""
+        if self.game_over:
+            return
+            
+        # 累積距離（基於遊戲速度）
+        distance_increment = self.game_speed
+        self.total_distance += distance_increment
+        self.distance_score_accumulator += distance_increment
+        
+        # 每走過指定距離給予分數
+        if self.distance_score_accumulator >= ScoreSystem.DISTANCE_SCORE_INTERVAL:
+            # 計算基礎距離分數
+            base_score = ScoreSystem.BASE_DISTANCE_SCORE
+            
+            # 計算速度獎勵倍數
+            speed_multiplier = self.calculate_speed_multiplier()
+            
+            # 計算難度倍數
+            difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(
+                self.selected_difficulty, 1.0
+            )
+            
+            # 計算最終分數
+            distance_score = int(base_score * speed_multiplier * difficulty_multiplier)
+            
+            # 添加分數
+            self.score += distance_score
+            
+            # 記錄速度獎勵分數用於顯示
+            if speed_multiplier > 1.0:
+                self.last_speed_bonus_score = distance_score - base_score
+            else:
+                self.last_speed_bonus_score = 0
+            
+            # 重置累積器
+            self.distance_score_accumulator = 0
+            
+            # 顯示分數獲得資訊（較低頻率）
+            if self.total_distance % (ScoreSystem.DISTANCE_SCORE_INTERVAL * 5) == 0:
+                print(f"📊 距離分數: +{distance_score} (速度倍數: {speed_multiplier:.1f}x, 難度倍數: {difficulty_multiplier:.1f}x)")
+
+    def calculate_speed_multiplier(self):
+        """計算基於速度的分數倍數"""
+        if self.game_speed <= ScoreSystem.SPEED_BONUS_THRESHOLD:
+            return 1.0
+        
+        # 計算超過閾值的速度
+        excess_speed = self.game_speed - ScoreSystem.SPEED_BONUS_THRESHOLD
+        
+        # 計算倍數
+        multiplier = 1.0 + (excess_speed * ScoreSystem.SPEED_BONUS_MULTIPLIER)
+        
+        # 限制最大倍數
+        return min(multiplier, ScoreSystem.MAX_SPEED_MULTIPLIER)
+
+    def calculate_obstacle_score(self, base_score):
+        """計算障礙物分數（包含速度和難度獎勵）"""
+        # 計算速度倍數
+        speed_multiplier = self.calculate_speed_multiplier()
+        
+        # 計算難度倍數
+        difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(
+            self.selected_difficulty, 1.0
+        )
+        
+        # 計算連擊倍數
+        combo_multiplier = 1.0 + (self.combo_count * (ScoreSystem.COMBO_BONUS_MULTIPLIER - 1.0) * 0.1)
+        combo_multiplier = min(combo_multiplier, 3.0)  # 最大3倍連擊獎勵
+        
+        # 計算最終分數
+        final_score = int(base_score * speed_multiplier * difficulty_multiplier * combo_multiplier)
+        
+        return final_score
 
     def apply_nightmare_effects(self):
         """應用噩夢模式的特殊效果"""
@@ -412,12 +501,17 @@ class Game:
                 # 檢查特殊情況
                 if obstacle.can_walk_through(self.selected_difficulty):
                     self.combo_count += 1
-                    self.score += 5
+                    obstacle_score = self.calculate_obstacle_score(5)
+                    self.score += obstacle_score
                     continue
-                elif obstacle.obstacle_type == "hanging_rock" and not self.dinosaur.is_jumping:
+                elif (
+                    obstacle.obstacle_type == "hanging_rock"
+                    and not self.dinosaur.is_jumping
+                ):
                     # 懸浮石頭：不跳躍時可以安全通過
                     self.combo_count += 1
-                    self.score += 8
+                    obstacle_score = self.calculate_obstacle_score(8)
+                    self.score += obstacle_score
                     continue
                 elif obstacle.obstacle_type == "tall_rock" and self.dinosaur.is_ducking:
                     # 高石頭：必須蹲下才能通過，不蹲下就死亡
@@ -425,7 +519,8 @@ class Game:
                     continue
                 elif obstacle.can_duck_under() and self.dinosaur.is_ducking:
                     self.combo_count += 1
-                    self.score += 10
+                    obstacle_score = self.calculate_obstacle_score(10)
+                    self.score += obstacle_score
                     continue
                 elif self.dinosaur.has_shield:
                     self.dinosaur.has_shield = False
@@ -437,7 +532,8 @@ class Game:
 
                     if obstacle in self.obstacle_manager.obstacles:
                         self.obstacle_manager.obstacles.remove(obstacle)
-                    self.score += 20
+                    obstacle_score = self.calculate_obstacle_score(20)
+                    self.score += obstacle_score
                     continue
                 elif obstacle.obstacle_type == "invisible" and not obstacle.is_warned:
                     continue
@@ -460,15 +556,9 @@ class Game:
         removed_count = initial_count - len(self.obstacle_manager.obstacles)
 
         if removed_count > 0:
-            score_multiplier = {
-                Difficulty.EASY: 1,
-                Difficulty.MEDIUM: 1.5,
-                Difficulty.HARD: 2,
-                Difficulty.NIGHTMARE: 4,
-            }
-            self.score += int(
-                10 * removed_count * score_multiplier.get(self.selected_difficulty, 1)
-            )
+            # 使用新的分數計算系統
+            obstacle_score = self.calculate_obstacle_score(ScoreSystem.OBSTACLE_BASE_SCORE * removed_count)
+            self.score += obstacle_score
 
         return False
 
@@ -548,18 +638,31 @@ class Game:
         score_surface = self.font_medium.render(score_text, True, self.colors["BLACK"])
         self.screen.blit(score_surface, (margin, margin))
 
+        # 距離顯示
+        distance_km = self.total_distance / 1000
+        distance_text = f"距離: {distance_km:.1f}km"
+        distance_surface = self.font_small.render(distance_text, True, self.colors["BLUE"])
+        self.screen.blit(distance_surface, (margin, margin + line_height))
+
         # 最高分顯示
         if self.high_score > 0:
             high_score_text = f"最高分: {self.high_score}"
             high_score_surface = self.font_small.render(
                 high_score_text, True, self.colors["PURPLE"]
             )
-            self.screen.blit(high_score_surface, (margin, margin + line_height))
+            self.screen.blit(high_score_surface, (margin, margin + line_height * 2))
 
-        # 遊戲速度顯示
-        speed_text = f"速度: {self.game_speed:.1f}x"
-        speed_surface = self.font_small.render(speed_text, True, self.colors["BLUE"])
-        self.screen.blit(speed_surface, (margin, margin + line_height * 2))
+        # 遊戲速度顯示與速度獎勵
+        speed_multiplier = self.calculate_speed_multiplier()
+        if speed_multiplier > 1.0:
+            speed_text = f"速度: {self.game_speed:.1f}x (獎勵: {speed_multiplier:.1f}x)"
+            speed_color = self.colors["ORANGE"]
+        else:
+            speed_text = f"速度: {self.game_speed:.1f}x"
+            speed_color = self.colors["BLUE"]
+        
+        speed_surface = self.font_small.render(speed_text, True, speed_color)
+        self.screen.blit(speed_surface, (margin, margin + line_height * 3))
 
         # 難度等級顯示
         difficulty_names = {
@@ -568,23 +671,35 @@ class Game:
             Difficulty.HARD: "困難",
             Difficulty.NIGHTMARE: "噩夢",
         }
+        difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(self.selected_difficulty, 1.0)
         difficulty_text = (
-            f"難度: {difficulty_names.get(self.selected_difficulty, '未知')}"
+            f"難度: {difficulty_names.get(self.selected_difficulty, '未知')} ({difficulty_multiplier:.1f}x)"
         )
         difficulty_surface = self.font_small.render(
             difficulty_text, True, self.colors["PURPLE"]
         )
-        self.screen.blit(difficulty_surface, (margin, margin + line_height * 3))
+        self.screen.blit(difficulty_surface, (margin, margin + line_height * 4))
 
         # 連擊數顯示
-        current_line = 4
+        current_line = 5
         if self.combo_count > 0:
-            combo_text = f"連擊: {self.combo_count}"
+            combo_text = f"連擊: {self.combo_count}x"
             combo_surface = self.font_small.render(
                 combo_text, True, self.colors["ORANGE"]
             )
             self.screen.blit(
                 combo_surface, (margin, margin + line_height * current_line)
+            )
+            current_line += 1
+
+        # 速度獎勵分數顯示（當有速度獎勵時）
+        if self.last_speed_bonus_score > 0:
+            bonus_text = f"速度獎勵: +{self.last_speed_bonus_score}"
+            bonus_surface = self.font_small.render(
+                bonus_text, True, self.colors["YELLOW"]
+            )
+            self.screen.blit(
+                bonus_surface, (margin, margin + line_height * current_line)
             )
             current_line += 1
 
@@ -652,7 +767,7 @@ class Game:
             game_over_text, True, self.colors["RED"]
         )
         game_over_rect = game_over_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 - 80)
+            center=(self.screen_width // 2, self.screen_height // 2 - 120)
         )
         self.screen.blit(game_over_surface, game_over_rect)
 
@@ -662,9 +777,30 @@ class Game:
             final_score_text, True, self.colors["YELLOW"]
         )
         final_score_rect = final_score_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 - 30)
+            center=(self.screen_width // 2, self.screen_height // 2 - 70)
         )
         self.screen.blit(final_score_surface, final_score_rect)
+
+        # 距離統計
+        distance_km = self.total_distance / 1000
+        distance_text = f"總距離: {distance_km:.1f} 公里"
+        distance_surface = self.font_medium.render(
+            distance_text, True, self.colors["LIGHT_BLUE"]
+        )
+        distance_rect = distance_surface.get_rect(
+            center=(self.screen_width // 2, self.screen_height // 2 - 40)
+        )
+        self.screen.blit(distance_surface, distance_rect)
+
+        # 最大速度統計
+        max_speed_text = f"最高速度: {self.game_speed:.1f}x"
+        max_speed_surface = self.font_medium.render(
+            max_speed_text, True, self.colors["ORANGE"]
+        )
+        max_speed_rect = max_speed_surface.get_rect(
+            center=(self.screen_width // 2, self.screen_height // 2 - 10)
+        )
+        self.screen.blit(max_speed_surface, max_speed_rect)
 
         # 最高分顯示
         if self.score == self.high_score and self.high_score > 0:

@@ -271,8 +271,7 @@ class Obstacle:
             )
         # 頂部標記
         pygame.draw.rect(
-            screen, self.colors["DARK_GRAY"], 
-            (self.x + 5, self.y, self.width - 10, 8)
+            screen, self.colors["DARK_GRAY"], (self.x + 5, self.y, self.width - 10, 8)
         )
 
     def _draw_hanging_rock(self, screen):
@@ -287,8 +286,7 @@ class Obstacle:
         )
         # 懸浮石頭的邊框
         pygame.draw.rect(
-            screen, self.colors["WHITE"], 
-            (self.x, self.y, self.width, self.height), 2
+            screen, self.colors["WHITE"], (self.x, self.y, self.width, self.height), 2
         )
         # 危險標記
         pygame.draw.polygon(
@@ -532,13 +530,44 @@ class ObstacleManager:
             if is_gravity_reversed:
                 obstacle_types = ["flying", "flying", "short", "normal"]
         elif difficulty == Difficulty.HARD:
-            obstacle_types = ["normal", "tall", "wide", "short", "flying", "double", "tall_rock", "hanging_rock"]
+            obstacle_types = [
+                "normal",
+                "tall",
+                "wide",
+                "short",
+                "flying",
+                "double",
+                "tall_rock",
+                "hanging_rock",
+            ]
             if is_gravity_reversed:
-                obstacle_types = ["flying", "flying", "double", "short", "normal", "hanging_rock"]
+                obstacle_types = [
+                    "flying",
+                    "flying",
+                    "double",
+                    "short",
+                    "normal",
+                    "hanging_rock",
+                ]
         else:  # NIGHTMARE - 保持簡單但速度極快
-            obstacle_types = ["normal", "tall", "wide", "flying", "double", "tall_rock", "hanging_rock"]
+            obstacle_types = [
+                "normal",
+                "tall",
+                "wide",
+                "flying",
+                "double",
+                "tall_rock",
+                "hanging_rock",
+            ]
             if is_gravity_reversed:
-                obstacle_types = ["flying", "flying", "flying", "double", "normal", "hanging_rock"]
+                obstacle_types = [
+                    "flying",
+                    "flying",
+                    "flying",
+                    "double",
+                    "normal",
+                    "hanging_rock",
+                ]
 
         return obstacle_types
 

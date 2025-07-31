@@ -100,3 +100,27 @@ class Physics:
 
 # 字體設定
 FONT_PATH = r"C:\Windows\Fonts\msjh.ttc"  # 微軟正黑體路徑
+
+
+# 分數系統設定
+class ScoreSystem:
+    # 距離分數設定
+    DISTANCE_SCORE_INTERVAL = 100  # 每走過100像素給分
+    BASE_DISTANCE_SCORE = 1  # 基礎距離分數
+    
+    # 速度倍數設定
+    SPEED_BONUS_THRESHOLD = 8.0  # 速度超過此值開始給額外分數
+    SPEED_BONUS_MULTIPLIER = 0.2  # 每增加1速度單位，分數倍數增加0.2
+    MAX_SPEED_MULTIPLIER = 5.0  # 最大速度倍數
+    
+    # 障礙物分數（根據難度調整）
+    OBSTACLE_BASE_SCORE = 10
+    COMBO_BONUS_MULTIPLIER = 1.5  # 連擊倍數
+    
+    # 難度分數倍數
+    DIFFICULTY_MULTIPLIERS = {
+        1: 1.0,   # 簡單
+        2: 1.5,   # 中等
+        3: 2.0,   # 困難
+        4: 3.0,   # 噩夢
+    }
