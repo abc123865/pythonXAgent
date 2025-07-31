@@ -17,6 +17,7 @@
 import sys
 import os
 import threading
+import asyncio
 
 # 添加 src 目錄到 Python 路徑
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,20 +28,20 @@ from game_engine import Game
 
 # 嘗試導入語音功能
 try:
-    from text_to_speech import TextToSpeech
+    from text_to_speech import AsyncTextToSpeech
 
     TTS_AVAILABLE = True
 except ImportError:
     TTS_AVAILABLE = False
 
 
-def speak_intro():
-    """語音播報遊戲介紹"""
+async def speak_intro_async():
+    """非同步語音播報遊戲介紹"""
     if not TTS_AVAILABLE:
         return
 
     try:
-        tts = TextToSpeech()
+        tts = AsyncTextToSpeech()
         if not tts.is_available:
             return
 
@@ -51,8 +52,44 @@ def speak_intro():
         準備好挑戰了嗎？讓我們開始遊戲吧！"""
 
         print("🔊 正在播放語音介紹...")
-        # 非阻塞播放，不影響遊戲啟動
-        tts.speak(intro_text, blocking=False)
+        # 高優先級非同步播放
+        await tts.speak_async(intro_text, priority="high")
+
+    except Exception as e:
+        print(f"⚠️ 非同步語音播報失敗: {e}")
+
+
+def speak_intro():
+    """語音播報遊戲介紹 (簡化版本)"""
+    if not TTS_AVAILABLE:
+        return
+
+    try:
+        # 使用最簡單的同步版本，避免異步複雜性
+        from text_to_speech import AsyncTextToSpeech
+
+        tts = AsyncTextToSpeech()
+        if not tts.is_available:
+            return
+
+        intro_text = """歡迎來到小恐龍遊戲！
+        這是一個功能豐富的跳躍遊戲，包含四種難度等級。
+        遊戲特色包括動態螢幕適應、進階障礙物系統、恐龍特殊技能等。
+        操作很簡單：使用方向鍵或空白鍵跳躍，Z鍵啟動護盾。
+        準備好挑戰了嗎？讓我們開始遊戲吧！"""
+
+        print("🔊 正在播放語音介紹...")
+
+        # 使用最簡單的非阻塞調用，避免事件循環問題
+        def simple_speak():
+            try:
+                tts._speak_text(intro_text)
+            except Exception as e:
+                print(f"⚠️ 語音播報失敗: {e}")
+
+        # 在背景線程中運行
+        speech_thread = threading.Thread(target=simple_speak, daemon=True)
+        speech_thread.start()
 
     except Exception as e:
         print(f"⚠️ 語音播報失敗: {e}")

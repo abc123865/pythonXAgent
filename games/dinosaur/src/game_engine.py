@@ -213,19 +213,31 @@ class Game:
         Args:
             difficulty (int): 難度等級
         """
-        self.selected_difficulty = difficulty
-        self.game_state = GameState.PLAYING
+        try:
+            print(f"🚀 遊戲開始！難度等級: {DIFFICULTY_SETTINGS[difficulty]['name']}")
+            self.selected_difficulty = difficulty
+            self.game_state = GameState.PLAYING
 
-        # 重新初始化遊戲物件
-        self.dinosaur = Dinosaur(
-            self.screen_width, self.screen_height, self.ground_height
-        )
-        self.obstacle_manager = ObstacleManager(
-            self.screen_width, self.screen_height, self.ground_height
-        )
-        self.clouds = []
+            # 重新初始化遊戲物件
+            print("🦕 正在初始化恐龍...")
+            self.dinosaur = Dinosaur(
+                self.screen_width, self.screen_height, self.ground_height
+            )
+            print("🚧 正在初始化障礙物管理器...")
+            self.obstacle_manager = ObstacleManager(
+                self.screen_width, self.screen_height, self.ground_height
+            )
+            print("☁️ 正在清空雲朵...")
+            self.clouds = []
+        except Exception as e:
+            print(f"❌ 初始化遊戲物件時發生錯誤: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return
 
         # 重置遊戲狀態
+        print("🔄 正在重置遊戲狀態...")
         self.score = 0
         self.game_over = False
         self.cloud_timer = 0
@@ -243,6 +255,7 @@ class Game:
         self.game_start_flash_timer = 0
 
         # 播放遊戲開始音效
+        print("🔊 播放遊戲開始音效...")
         self.sound_manager.play_game_start_sound()
 
         # 重置日夜轉換效果
@@ -261,13 +274,18 @@ class Game:
         self.obstacle_spawn_rate = settings["obstacle_spawn_rate"]
         self.speed_increase_rate = settings["speed_increase_rate"]
 
-        print(f"🚀 遊戲開始！難度等級: {settings['name']}")
+        print(
+            f"⚙️ 難度設定完成: 速度={self.game_speed}, 生成率={self.obstacle_spawn_rate}"
+        )
 
         # 播放遊戲開始音效
         self.sound_manager.play_menu_select()
 
         # 開始背景音樂
+        print("🎵 開始背景音樂...")
         self.sound_manager.start_background_music()
+
+        print("✅ 遊戲初始化完成，進入遊戲循環...")
 
     def return_to_menu(self):
         """返回主選單"""
@@ -421,64 +439,74 @@ class Game:
 
     def update(self):
         """更新遊戲邏輯"""
-        if self.game_state == GameState.MENU:
-            self.menu_system.update()
+        try:
+            if self.game_state == GameState.MENU:
+                self.menu_system.update()
 
-        elif self.game_state == GameState.PLAYING:
-            # 更新遊戲開始視覺反饋
-            if self.is_game_starting:
-                self.game_start_flash_timer += 1
-                if self.game_start_flash_timer >= self.game_start_flash_duration:
-                    self.is_game_starting = False
-                    self.game_start_flash_timer = 0
+            elif self.game_state == GameState.PLAYING:
+                # 更新遊戲開始視覺反饋
+                if self.is_game_starting:
+                    self.game_start_flash_timer += 1
+                    if self.game_start_flash_timer >= self.game_start_flash_duration:
+                        self.is_game_starting = False
+                        self.game_start_flash_timer = 0
 
-            if not self.game_over:
-                # 噩夢模式的特殊效果
-                if self.selected_difficulty >= Difficulty.NIGHTMARE:
-                    self.apply_nightmare_effects()
+                if not self.game_over:
+                    # 噩夢模式的特殊效果
+                    if self.selected_difficulty >= Difficulty.NIGHTMARE:
+                        self.apply_nightmare_effects()
 
-                # 更新恐龍
-                self.dinosaur.update()
+                    # 更新恐龍
+                    self.dinosaur.update()
 
-                # 更新距離和分數
-                self.update_distance_and_score()
+                    # 更新距離和分數
+                    self.update_distance_and_score()
 
-                # 更新日夜轉換效果
-                self.update_day_night_transition()
+                    # 更新日夜轉換效果
+                    self.update_day_night_transition()
 
-                # 增加遊戲速度
-                self.speed_increase_timer += 1
-                speed_increase_interval = max(120, 600 - self.selected_difficulty * 80)
-                if self.speed_increase_timer >= speed_increase_interval:
-                    self.game_speed += self.speed_increase_rate
-                    self.speed_increase_timer = 0
-                    print(f"🚀 遊戲速度提升！當前速度: {self.game_speed:.1f}")
+                    # 增加遊戲速度
+                    self.speed_increase_timer += 1
+                    speed_increase_interval = max(
+                        120, 600 - self.selected_difficulty * 80
+                    )
+                    if self.speed_increase_timer >= speed_increase_interval:
+                        self.game_speed += self.speed_increase_rate
+                        self.speed_increase_timer = 0
+                        print(f"🚀 遊戲速度提升！當前速度: {self.game_speed:.1f}")
 
-                # 更新障礙物
-                is_gravity_reversed = (
-                    hasattr(self.dinosaur, "is_gravity_reversed")
-                    and self.dinosaur.is_gravity_reversed
-                )
-                self.obstacle_manager.spawn_obstacle(
-                    self.selected_difficulty,
-                    self.obstacle_spawn_rate,
-                    is_gravity_reversed,
-                    self.sound_manager,  # 傳入音效管理器
-                )
-                self.obstacle_manager.update(self.game_speed, self.sound_manager)
+                    # 更新障礙物
+                    is_gravity_reversed = (
+                        hasattr(self.dinosaur, "is_gravity_reversed")
+                        and self.dinosaur.is_gravity_reversed
+                    )
+                    self.obstacle_manager.spawn_obstacle(
+                        self.selected_difficulty,
+                        self.obstacle_spawn_rate,
+                        is_gravity_reversed,
+                        self.sound_manager,  # 傳入音效管理器
+                    )
+                    self.obstacle_manager.update(self.game_speed, self.sound_manager)
 
-                # 生成雲朵
-                self.spawn_cloud()
-                self.update_clouds()
+                    # 生成雲朵
+                    self.spawn_cloud()
+                    self.update_clouds()
 
-                # 檢查碰撞
-                if self.check_collision():
-                    self.game_over = True
-                    # 播放死亡音效
-                    self.sound_manager.play_death_sound()
-                    # 檢查並更新最高分記錄
-                    if self.update_high_score(self.score):
-                        print(f"🎉 新紀錄！分數: {self.high_score}")
+                    # 檢查碰撞
+                    if self.check_collision():
+                        self.game_over = True
+                        # 播放死亡音效
+                        self.sound_manager.play_death_sound()
+                        # 檢查並更新最高分記錄
+                        if self.update_high_score(self.score):
+                            print(f"🎉 新紀錄！分數: {self.high_score}")
+        except Exception as e:
+            print(f"❌ 遊戲更新時發生錯誤: {e}")
+            import traceback
+
+            traceback.print_exc()
+            # 返回選單而不是直接退出
+            self.game_state = GameState.MENU
 
             # 減少螢幕震動
             if self.screen_shake > 0:
@@ -922,85 +950,95 @@ class Game:
 
     def draw(self):
         """繪製遊戲畫面"""
-        if self.game_state == GameState.MENU:
-            self.menu_system.draw(self.screen)
+        try:
+            if self.game_state == GameState.MENU:
+                self.menu_system.draw(self.screen)
 
-        elif self.game_state == GameState.PLAYING:
-            # 螢幕震動效果
-            screen_offset_x = (
-                random.randint(-self.screen_shake, self.screen_shake)
-                if self.screen_shake > 0
-                else 0
-            )
-            screen_offset_y = (
-                random.randint(-self.screen_shake, self.screen_shake)
-                if self.screen_shake > 0
-                else 0
-            )
-
-            # 根據難度和分數調整背景色 (日夜反轉效果)
-            current_bg = self.get_background_color()
-            self.screen.fill(current_bg)
-
-            # 畫地面
-            # 使用轉換進度來決定地面顏色
-            if self.transition_progress <= 0:
-                ground_color = self.colors["BLACK"]  # 白天時地面是黑色
-            elif self.transition_progress >= 1:
-                ground_color = self.colors["WHITE"]  # 夜晚時地面是白色
-            else:
-                # 平滑轉換地面顏色
-                ground_color = self.lerp_color(
-                    self.colors["BLACK"], self.colors["WHITE"], self.transition_progress
+            elif self.game_state == GameState.PLAYING:
+                # 螢幕震動效果
+                screen_offset_x = (
+                    random.randint(-self.screen_shake, self.screen_shake)
+                    if self.screen_shake > 0
+                    else 0
                 )
-            pygame.draw.line(
-                self.screen,
-                ground_color,
-                (screen_offset_x, self.ground_height + screen_offset_y),
-                (
-                    self.screen_width + screen_offset_x,
-                    self.ground_height + screen_offset_y,
-                ),
-                2,
-            )
+                screen_offset_y = (
+                    random.randint(-self.screen_shake, self.screen_shake)
+                    if self.screen_shake > 0
+                    else 0
+                )
 
-            # 畫雲朵
-            for cloud in self.clouds:
-                cloud.draw(self.screen)
+                # 根據難度和分數調整背景色 (日夜反轉效果)
+                current_bg = self.get_background_color()
+                self.screen.fill(current_bg)
 
-            # 畫恐龍
-            if self.dinosaur:
-                self.dinosaur.draw(self.screen)
+                # 畫地面
+                # 使用轉換進度來決定地面顏色
+                if self.transition_progress <= 0:
+                    ground_color = self.colors["BLACK"]  # 白天時地面是黑色
+                elif self.transition_progress >= 1:
+                    ground_color = self.colors["WHITE"]  # 夜晚時地面是白色
+                else:
+                    # 平滑轉換地面顏色
+                    ground_color = self.lerp_color(
+                        self.colors["BLACK"],
+                        self.colors["WHITE"],
+                        self.transition_progress,
+                    )
+                pygame.draw.line(
+                    self.screen,
+                    ground_color,
+                    (screen_offset_x, self.ground_height + screen_offset_y),
+                    (
+                        self.screen_width + screen_offset_x,
+                        self.ground_height + screen_offset_y,
+                    ),
+                    2,
+                )
 
-            # 畫障礙物
-            if self.obstacle_manager:
-                self.obstacle_manager.draw(self.screen)
+                # 畫雲朵
+                for cloud in self.clouds:
+                    cloud.draw(self.screen)
 
-            # 顯示遊戲資訊
-            self.draw_game_info()
+                # 畫恐龍
+                if self.dinosaur:
+                    self.dinosaur.draw(self.screen)
 
-            # 顯示控制說明 (只在遊戲開始時)
-            if self.score == 0 and not self.game_over:
-                self.draw_start_instructions()
+                # 畫障礙物
+                if self.obstacle_manager:
+                    self.obstacle_manager.draw(self.screen)
 
-            # 遊戲結束畫面
-            if self.game_over:
-                self.draw_game_over_screen()
+                # 顯示遊戲資訊
+                self.draw_game_info()
 
-            # 遊戲開始閃爍效果
-            if self.is_game_starting and self.game_start_flash_timer > 0:
-                self.draw_game_start_flash()
+                # 顯示控制說明 (只在遊戲開始時)
+                if self.score == 0 and not self.game_over:
+                    self.draw_start_instructions()
 
-            # 噩夢模式螢幕閃爍效果
-            if (
-                self.selected_difficulty == Difficulty.NIGHTMARE
-                and self.screen_flicker_duration > 0
-                and not self.game_over
-            ):
-                self.apply_screen_flicker()
+                # 遊戲結束畫面
+                if self.game_over:
+                    self.draw_game_over_screen()
 
-        # 更新顯示
-        pygame.display.flip()
+                # 遊戲開始閃爍效果
+                if self.is_game_starting:
+                    self.draw_game_start_flash()
+
+                # 噩夢模式螢幕閃爍
+                if (
+                    self.selected_difficulty >= Difficulty.NIGHTMARE
+                    and self.screen_flicker_duration > 0
+                ):
+                    self.draw_screen_flicker()
+
+            # 更新螢幕
+            pygame.display.flip()
+
+        except Exception as e:
+            print(f"❌ 遊戲繪製時發生錯誤: {e}")
+            import traceback
+
+            traceback.print_exc()
+            # 返回選單而不是直接退出
+            self.game_state = GameState.MENU
 
     def draw_game_info(self):
         """繪製遊戲資訊"""

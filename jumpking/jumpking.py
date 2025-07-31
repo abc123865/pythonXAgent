@@ -7,8 +7,8 @@ import os
 pygame.init()
 
 # 遊戲設定
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 1200  # 增加視窗寬度
+SCREEN_HEIGHT = 900  # 增加視窗高度
 FPS = 60
 
 # 顏色定義
@@ -843,6 +843,13 @@ class LevelManager:
 
 class Game:
     def __init__(self):
+        # 全屏設定
+        self.fullscreen = False
+        self.screen_width = SCREEN_WIDTH
+        self.screen_height = SCREEN_HEIGHT
+        self.ui_scale_x = 1.0
+        self.ui_scale_y = 1.0
+        self.ui_scale = 1.0
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Jump King - 十關挑戰")
         self.clock = pygame.time.Clock()
@@ -871,12 +878,33 @@ class Game:
             "C:\\Windows\\Fonts\\kaiu.ttf",  # 標楷體
         ]
 
+        # 選單選項
+        self.menu_selection = 0
+        self.level_select_selection = 1
+
+        # 載入字體
+        self.load_fonts()
+
+    def load_fonts(self):
+        """載入字體"""
+        font_paths = [
+            "C:\\Windows\\Fonts\\msjh.ttc",  # 微軟正黑體
+            "C:\\Windows\\Fonts\\msyh.ttc",  # 微軟雅黑
+            "C:\\Windows\\Fonts\\simsun.ttc",  # 新細明體
+            "C:\\Windows\\Fonts\\kaiu.ttf",  # 標楷體
+        ]
+
+        # 根據縮放調整字體大小
+        large_size = self.get_scaled_font(48)
+        medium_size = self.get_scaled_font(36)
+        small_size = self.get_scaled_font(24)
+
         font_loaded = False
         for font_path in font_paths:
             try:
-                self.font_large = pygame.font.Font(font_path, 48)
-                self.font_medium = pygame.font.Font(font_path, 36)
-                self.font_small = pygame.font.Font(font_path, 24)
+                self.font_large = pygame.font.Font(font_path, large_size)
+                self.font_medium = pygame.font.Font(font_path, medium_size)
+                self.font_small = pygame.font.Font(font_path, small_size)
                 font_loaded = True
                 print(f"成功載入字體: {font_path}")
                 break
@@ -885,14 +913,10 @@ class Game:
 
         if not font_loaded:
             # 如果所有字體都載入失敗，使用系統預設字體
-            self.font_large = pygame.font.Font(None, 48)
-            self.font_medium = pygame.font.Font(None, 36)
-            self.font_small = pygame.font.Font(None, 24)
+            self.font_large = pygame.font.Font(None, large_size)
+            self.font_medium = pygame.font.Font(None, medium_size)
+            self.font_small = pygame.font.Font(None, small_size)
             print("使用系統預設字體")
-
-        # 選單選項
-        self.menu_selection = 0
-        self.level_select_selection = 1
 
     def load_progress(self):
         """載入遊戲進度"""
@@ -917,6 +941,54 @@ class Game:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except:
             pass
+
+    def toggle_fullscreen(self):
+        """切換全屏模式"""
+        self.fullscreen = not self.fullscreen
+        if self.fullscreen:
+            # 獲取螢幕解析度
+            info = pygame.display.Info()
+            self.screen_width = info.current_w
+            self.screen_height = info.current_h
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+            # 計算UI縮放比例
+            self.ui_scale_x = self.screen_width / SCREEN_WIDTH
+            self.ui_scale_y = self.screen_height / SCREEN_HEIGHT
+            self.ui_scale = min(self.ui_scale_x, self.ui_scale_y)  # 保持比例
+        else:
+            self.screen_width = SCREEN_WIDTH
+            self.screen_height = SCREEN_HEIGHT
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.ui_scale_x = 1.0
+            self.ui_scale_y = 1.0
+            self.ui_scale = 1.0
+
+        # 重新載入字體以適應新的縮放比例
+        self.load_fonts()
+        pygame.display.set_caption("Jump King - 十關挑戰")
+
+    def scale_pos(self, x, y):
+        """根據UI縮放調整位置"""
+        if self.fullscreen:
+            # 居中顯示，保持比例
+            offset_x = (self.screen_width - SCREEN_WIDTH * self.ui_scale) // 2
+            offset_y = (self.screen_height - SCREEN_HEIGHT * self.ui_scale) // 2
+            return int(x * self.ui_scale + offset_x), int(y * self.ui_scale + offset_y)
+        return x, y
+
+    def scale_size(self, width, height=None):
+        """根據UI縮放調整大小"""
+        if height is None:
+            height = width
+        if self.fullscreen:
+            return int(width * self.ui_scale), int(height * self.ui_scale)
+        return width, height
+
+    def get_scaled_font(self, base_size):
+        """獲取縮放後的字體大小"""
+        if self.fullscreen:
+            return max(int(base_size * self.ui_scale), 12)  # 最小字體大小12
+        return base_size
 
     def start_level(self, level_num):
         """開始指定關卡"""
@@ -1024,6 +1096,26 @@ class Game:
             if event.type == pygame.QUIT:
                 self.save_progress()
                 self.running = False
+            elif event.type == pygame.KEYDOWN:
+                # 全域按鍵處理
+                if event.key == pygame.K_F11:
+                    self.toggle_fullscreen()
+                elif event.key == pygame.K_ESCAPE and self.fullscreen:
+                    # 在全屏模式下按ESC退出全屏
+                    self.toggle_fullscreen()
+                else:
+                    # 處理其他按鍵事件
+                    if self.state == MENU:
+                        self.handle_menu_events(event)
+                    elif self.state == LEVEL_SELECT:
+                        self.handle_level_select_events(event)
+                    elif self.state == PLAYING:
+                        self.handle_playing_events(event)
+                    elif self.state in [VICTORY, GAME_OVER]:
+                        if event.key == pygame.K_RETURN:
+                            self.state = LEVEL_SELECT
+                        elif event.key == pygame.K_ESCAPE:
+                            self.state = MENU
             else:
                 if self.state == MENU:
                     self.handle_menu_events(event)
@@ -1032,11 +1124,7 @@ class Game:
                 elif self.state == PLAYING:
                     self.handle_playing_events(event)
                 elif self.state in [VICTORY, GAME_OVER]:
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_RETURN:
-                            self.state = LEVEL_SELECT
-                        elif event.key == pygame.K_ESCAPE:
-                            self.state = MENU
+                    pass  # 其他事件類型不需要處理
 
     def check_goal_completion(self, level_data):
         """檢查玩家是否踩在目標平台上"""
@@ -1120,12 +1208,14 @@ class Game:
 
         # 標題
         title = self.font_large.render("Jump King - 十關挑戰", True, YELLOW)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
+        title_x, title_y = self.scale_pos(SCREEN_WIDTH // 2, 150)
+        title_rect = title.get_rect(center=(title_x, title_y))
         self.screen.blit(title, title_rect)
 
         # 副標題
         subtitle = self.font_medium.render("考驗你的耐心與技巧", True, WHITE)
-        subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        subtitle_x, subtitle_y = self.scale_pos(SCREEN_WIDTH // 2, 200)
+        subtitle_rect = subtitle.get_rect(center=(subtitle_x, subtitle_y))
         self.screen.blit(subtitle, subtitle_rect)
 
         # 選單選項
@@ -1133,20 +1223,23 @@ class Game:
         for i, option in enumerate(menu_options):
             color = YELLOW if i == self.menu_selection else WHITE
             text = self.font_medium.render(option, True, color)
-            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 300 + i * 50))
+            text_x, text_y = self.scale_pos(SCREEN_WIDTH // 2, 300 + i * 50)
+            text_rect = text.get_rect(center=(text_x, text_y))
             self.screen.blit(text, text_rect)
 
         # 進度資訊
         progress_text = f"已解鎖關卡: {self.unlocked_levels}/{TOTAL_LEVELS}"
         progress = self.font_small.render(progress_text, True, GREEN)
-        progress_rect = progress.get_rect(center=(SCREEN_WIDTH // 2, 500))
+        progress_x, progress_y = self.scale_pos(SCREEN_WIDTH // 2, 500)
+        progress_rect = progress.get_rect(center=(progress_x, progress_y))
         self.screen.blit(progress, progress_rect)
 
         # 操作說明
-        controls = ["↑↓ 選擇", "Enter 確認", "ESC 退出"]
+        controls = ["↑↓ 選擇", "Enter 確認", "ESC 退出", "F11 切換全屏"]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
-            self.screen.blit(text, (50, 500 + i * 25))
+            control_x, control_y = self.scale_pos(50, 500 + i * 25)
+            self.screen.blit(text, (control_x, control_y))
 
     def draw_level_select(self):
         """繪製關卡選擇畫面"""
@@ -1154,7 +1247,8 @@ class Game:
 
         # 標題
         title = self.font_large.render("選擇關卡", True, YELLOW)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        title_x, title_y = self.scale_pos(SCREEN_WIDTH // 2, 100)
+        title_rect = title.get_rect(center=(title_x, title_y))
         self.screen.blit(title, title_rect)
 
         # 關卡選項
@@ -1168,6 +1262,11 @@ class Game:
             col = (level - 1) % cols
             x = start_x + col * 140
             y = start_y + row * 120
+
+            # 使用縮放位置
+            scaled_x, scaled_y = self.scale_pos(x, y)
+            rect_width, rect_height = self.scale_size(100, 80)
+            border_width, border_height = self.scale_size(110, 90)
 
             # 判斷關卡狀態
             if level > self.unlocked_levels:
@@ -1193,27 +1292,42 @@ class Game:
 
             # 選中的關卡
             if level == self.level_select_selection:
-                pygame.draw.rect(self.screen, YELLOW, (x - 5, y - 5, 110, 90), 3)
+                border_x = scaled_x - int(5 * self.ui_scale)
+                border_y = scaled_y - int(5 * self.ui_scale)
+                border_thickness = max(1, int(3 * self.ui_scale))
+                pygame.draw.rect(
+                    self.screen,
+                    YELLOW,
+                    (border_x, border_y, border_width, border_height),
+                    border_thickness,
+                )
 
             # 關卡方塊
-            pygame.draw.rect(self.screen, color, (x, y, 100, 80))
+            pygame.draw.rect(
+                self.screen, color, (scaled_x, scaled_y, rect_width, rect_height)
+            )
 
             # 關卡編號
             level_text = self.font_medium.render(f"第{level}關", True, text_color)
-            level_rect = level_text.get_rect(center=(x + 50, y + 20))
+            level_text_x, level_text_y = self.scale_pos(x + 50, y + 20)
+            level_rect = level_text.get_rect(center=(level_text_x, level_text_y))
             self.screen.blit(level_text, level_rect)
 
             # 關卡名稱
             level_data = self.level_manager.get_level(level)
             if level_data:
                 name_text = self.font_small.render(level_data["name"], True, text_color)
-                name_rect = name_text.get_rect(center=(x + 50, y + 40))
+                name_text_x, name_text_y = self.scale_pos(x + 50, y + 40)
+                name_rect = name_text.get_rect(center=(name_text_x, name_text_y))
                 self.screen.blit(name_text, name_rect)
 
             # 狀態
             for i, line in enumerate(status.split("\n")):
                 status_text = self.font_small.render(line, True, text_color)
-                status_rect = status_text.get_rect(center=(x + 50, y + 55 + i * 12))
+                status_text_x, status_text_y = self.scale_pos(x + 50, y + 55 + i * 12)
+                status_rect = status_text.get_rect(
+                    center=(status_text_x, status_text_y)
+                )
                 self.screen.blit(status_text, status_rect)
 
         # 關卡詳情
@@ -1228,21 +1342,24 @@ class Game:
                     True,
                     YELLOW,
                 )
-                name_rect = name.get_rect(center=(SCREEN_WIDTH // 2, detail_y))
+                name_x, name_y = self.scale_pos(SCREEN_WIDTH // 2, detail_y)
+                name_rect = name.get_rect(center=(name_x, name_y))
                 self.screen.blit(name, name_rect)
 
                 # 目標死亡次數
                 target = self.font_small.render(
                     f"挑戰目標: {level_data['target_deaths']}次死亡內完成", True, WHITE
                 )
-                target_rect = target.get_rect(center=(SCREEN_WIDTH // 2, detail_y + 30))
+                target_x, target_y = self.scale_pos(SCREEN_WIDTH // 2, detail_y + 30)
+                target_rect = target.get_rect(center=(target_x, target_y))
                 self.screen.blit(target, target_rect)
 
         # 操作說明
-        controls = ["← → 選擇關卡", "Enter 開始", "ESC 返回"]
+        controls = ["← → 選擇關卡", "Enter 開始", "ESC 返回", "F11 切換全屏"]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
-            self.screen.blit(text, (50, 550 + i * 20))
+            control_x, control_y = self.scale_pos(50, 550 + i * 20)
+            self.screen.blit(text, (control_x, control_y))
 
     def draw_playing(self):
         """繪製遊戲畫面"""
@@ -1258,71 +1375,162 @@ class Game:
 
         # 繪製屏幕邊界牆壁
         wall_width = 10
-        # 左邊界牆壁
-        pygame.draw.rect(self.screen, GRAY, (0, 0, wall_width, SCREEN_HEIGHT))
-        # 右邊界牆壁
-        pygame.draw.rect(
-            self.screen, GRAY, (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT)
-        )
+        scaled_wall_width, _ = self.scale_size(wall_width)
+        scaled_screen_width = self.screen_width if self.fullscreen else SCREEN_WIDTH
+        scaled_screen_height = self.screen_height if self.fullscreen else SCREEN_HEIGHT
+
+        if self.fullscreen:
+            # 全屏模式下，邊界牆壁在遊戲區域的邊緣
+            offset_x = (self.screen_width - SCREEN_WIDTH * self.ui_scale) // 2
+            offset_y = (self.screen_height - SCREEN_HEIGHT * self.ui_scale) // 2
+            game_width = int(SCREEN_WIDTH * self.ui_scale)
+            game_height = int(SCREEN_HEIGHT * self.ui_scale)
+
+            # 左邊界牆壁
+            pygame.draw.rect(
+                self.screen, GRAY, (offset_x, offset_y, scaled_wall_width, game_height)
+            )
+            # 右邊界牆壁
+            pygame.draw.rect(
+                self.screen,
+                GRAY,
+                (
+                    offset_x + game_width - scaled_wall_width,
+                    offset_y,
+                    scaled_wall_width,
+                    game_height,
+                ),
+            )
+        else:
+            # 視窗模式
+            # 左邊界牆壁
+            pygame.draw.rect(self.screen, GRAY, (0, 0, wall_width, SCREEN_HEIGHT))
+            # 右邊界牆壁
+            pygame.draw.rect(
+                self.screen,
+                GRAY,
+                (SCREEN_WIDTH - wall_width, 0, wall_width, SCREEN_HEIGHT),
+            )
 
         # 繪製平台
         for platform in level_data["platforms"]:
             color = BROWN
             if platform["y"] <= level_data["goal_y"]:  # 目標平台
                 color = YELLOW
+
+            # 計算平台在螢幕上的位置
+            platform_x, platform_y = self.scale_pos(
+                platform["x"], platform["y"] - self.camera_y
+            )
+            platform_width, platform_height = self.scale_size(
+                platform["width"], platform["height"]
+            )
+
             pygame.draw.rect(
                 self.screen,
                 color,
-                (
-                    platform["x"],
-                    platform["y"] - self.camera_y,
-                    platform["width"],
-                    platform["height"],
-                ),
+                (platform_x, platform_y, platform_width, platform_height),
             )
 
         # 繪製死亡區域
         for zone in level_data["death_zones"]:
+            zone_x, zone_y = self.scale_pos(zone["x"], zone["y"] - self.camera_y)
+            zone_width, zone_height = self.scale_size(zone["width"], zone["height"])
+
             pygame.draw.rect(
                 self.screen,
                 RED,
-                (
-                    zone["x"],
-                    zone["y"] - self.camera_y,
-                    zone["width"],
-                    zone["height"],
-                ),
+                (zone_x, zone_y, zone_width, zone_height),
             )
 
         # 繪製玩家
-        self.player.draw(self.screen, self.camera_y)
+        self.draw_player(self.camera_y)
 
         # 繪製UI
         self.draw_playing_ui(level_data)
+
+    def draw_player(self, camera_y):
+        """繪製玩家（適應縮放）"""
+        if not self.player:
+            return
+
+        # 繪製玩家
+        player_color = BLUE
+        if self.player.jump_charging:
+            # 蓄力時顯示不同顏色
+            charge_ratio = (self.player.jump_power - MIN_JUMP_POWER) / (
+                MAX_JUMP_POWER - MIN_JUMP_POWER
+            )
+            red_component = min(255, int(100 + charge_ratio * 155))
+            player_color = (red_component, 100, 237)
+
+        # 計算玩家位置和大小
+        player_x, player_y = self.scale_pos(self.player.x, self.player.y - camera_y)
+        player_width, player_height = self.scale_size(
+            self.player.width, self.player.height
+        )
+
+        pygame.draw.rect(
+            self.screen, player_color, (player_x, player_y, player_width, player_height)
+        )
+
+        # 繪製面向方向指示
+        eye_offset_x = 20 if self.player.facing_right else 10
+        eye_x, eye_y = self.scale_pos(
+            self.player.x + eye_offset_x, self.player.y - camera_y + 10
+        )
+        eye_radius = max(1, int(3 * self.ui_scale))
+        pygame.draw.circle(self.screen, WHITE, (eye_x, eye_y), eye_radius)
+
+        # 繪製蓄力指示器
+        if self.player.jump_charging:
+            charge_ratio = (self.player.jump_power - MIN_JUMP_POWER) / (
+                MAX_JUMP_POWER - MIN_JUMP_POWER
+            )
+            bar_width, bar_height = self.scale_size(40, 8)
+            bar_x, bar_y = self.scale_pos(
+                self.player.x - 5, self.player.y - camera_y - 15
+            )
+
+            # 背景
+            pygame.draw.rect(self.screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
+
+            # 蓄力條
+            charge_width = int(bar_width * charge_ratio)
+            charge_color = (
+                RED if charge_ratio > 0.8 else YELLOW if charge_ratio > 0.5 else GREEN
+            )
+            pygame.draw.rect(
+                self.screen, charge_color, (bar_x, bar_y, charge_width, bar_height)
+            )
 
     def draw_playing_ui(self, level_data):
         """繪製遊戲中的UI"""
         # 關卡資訊
         level_text = f"第{self.current_level}關: {level_data['name']}"
         text = self.font_medium.render(level_text, True, YELLOW)
-        self.screen.blit(text, (10, 10))
+        ui_x, ui_y = self.scale_pos(10, 10)
+        self.screen.blit(text, (ui_x, ui_y))
 
         # 死亡次數
         deaths_text = f"死亡次數: {self.player.death_count}"
         text = self.font_small.render(deaths_text, True, WHITE)
-        self.screen.blit(text, (10, 45))
+        deaths_x, deaths_y = self.scale_pos(10, 45)
+        self.screen.blit(text, (deaths_x, deaths_y))
 
         # 目標
         target_text = f"目標: {level_data['target_deaths']}次內完成"
         color = GREEN if self.player.death_count <= level_data["target_deaths"] else RED
         text = self.font_small.render(target_text, True, color)
-        self.screen.blit(text, (10, 70))
+        target_x, target_y = self.scale_pos(10, 70)
+        self.screen.blit(text, (target_x, target_y))
 
         # 高度
         height = max(0, int((level_data["start_pos"][1] - self.player.y) / 10))
         height_text = f"高度: {height}m"
         text = self.font_small.render(height_text, True, WHITE)
-        self.screen.blit(text, (SCREEN_WIDTH - 150, 10))
+        height_x, height_y = self.scale_pos(SCREEN_WIDTH - 150, 10)
+        self.screen.blit(text, (height_x, height_y))
 
         # 控制說明
         controls = [
@@ -1331,24 +1539,28 @@ class Game:
             "放開 SPACE 跳躍",
             "R 重置位置",
             "ESC 返回選單",
+            "F11 切換全屏",
             "撞牆會反彈！",
         ]
 
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, WHITE)
-            self.screen.blit(text, (10, SCREEN_HEIGHT - 140 + i * 20))
+            control_x, control_y = self.scale_pos(10, SCREEN_HEIGHT - 140 + i * 20)
+            self.screen.blit(text, (control_x, control_y))
 
         # 玩家狀態
         status_text = f"在地面: {'是' if self.player.on_ground else '否'}"
         color = GREEN if self.player.on_ground else RED
         text = self.font_small.render(status_text, True, color)
-        self.screen.blit(text, (SCREEN_WIDTH - 150, 35))
+        status_x, status_y = self.scale_pos(SCREEN_WIDTH - 150, 35)
+        self.screen.blit(text, (status_x, status_y))
 
         # 蓄力狀態
         if self.player.jump_charging:
             charge_text = f"蓄力: {self.player.jump_power:.1f}"
             text = self.font_small.render(charge_text, True, YELLOW)
-            self.screen.blit(text, (SCREEN_WIDTH - 150, 60))
+            charge_x, charge_y = self.scale_pos(SCREEN_WIDTH - 150, 60)
+            self.screen.blit(text, (charge_x, charge_y))
 
     def draw_victory(self):
         """繪製勝利畫面"""
@@ -1356,7 +1568,8 @@ class Game:
 
         # 勝利訊息
         title = self.font_large.render("恭喜過關！", True, YELLOW)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        title_x, title_y = self.scale_pos(SCREEN_WIDTH // 2, 200)
+        title_rect = title.get_rect(center=(title_x, title_y))
         self.screen.blit(title, title_rect)
 
         # 統計資料
@@ -1367,24 +1580,28 @@ class Game:
 
             stats_text = f"第{self.current_level}關: {level_data['name']}"
             text = self.font_medium.render(stats_text, True, WHITE)
-            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 280))
+            stats_x, stats_y = self.scale_pos(SCREEN_WIDTH // 2, 280)
+            text_rect = text.get_rect(center=(stats_x, stats_y))
             self.screen.blit(text, text_rect)
 
             deaths_text = f"死亡次數: {deaths}"
             color = GREEN if deaths <= target else RED
             text = self.font_medium.render(deaths_text, True, color)
-            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 320))
+            deaths_x, deaths_y = self.scale_pos(SCREEN_WIDTH // 2, 320)
+            text_rect = text.get_rect(center=(deaths_x, deaths_y))
             self.screen.blit(text, text_rect)
 
             target_text = f"目標: {target}次"
             text = self.font_medium.render(target_text, True, WHITE)
-            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 360))
+            target_x, target_y = self.scale_pos(SCREEN_WIDTH // 2, 360)
+            text_rect = text.get_rect(center=(target_x, target_y))
             self.screen.blit(text, text_rect)
 
             if deaths <= target:
                 perfect_text = "挑戰成功！"
                 text = self.font_medium.render(perfect_text, True, GREEN)
-                text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 400))
+                perfect_x, perfect_y = self.scale_pos(SCREEN_WIDTH // 2, 400)
+                text_rect = text.get_rect(center=(perfect_x, perfect_y))
                 self.screen.blit(text, text_rect)
 
         # 操作說明
@@ -1394,12 +1611,21 @@ class Game:
             continue_text = "你已完成所有關卡！"
 
         text = self.font_small.render(continue_text, True, WHITE)
-        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 480))
+        continue_x, continue_y = self.scale_pos(SCREEN_WIDTH // 2, 480)
+        text_rect = text.get_rect(center=(continue_x, continue_y))
         self.screen.blit(text, text_rect)
 
         back_text = "ESC 返回主選單"
         text = self.font_small.render(back_text, True, WHITE)
-        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 510))
+        back_x, back_y = self.scale_pos(SCREEN_WIDTH // 2, 510)
+        text_rect = text.get_rect(center=(back_x, back_y))
+        self.screen.blit(text, text_rect)
+
+        # F11全屏快捷鍵說明
+        fullscreen_text = "F11 切換全屏"
+        text = self.font_small.render(fullscreen_text, True, GRAY)
+        fullscreen_x, fullscreen_y = self.scale_pos(SCREEN_WIDTH // 2, 540)
+        text_rect = text.get_rect(center=(fullscreen_x, fullscreen_y))
         self.screen.blit(text, text_rect)
 
     def draw(self):

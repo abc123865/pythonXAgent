@@ -49,6 +49,7 @@ class Dinosaur:
         self.has_shield = False
         self.double_jump_available = False
         self.animation_frame = 0
+        self.is_dashing = False  # 衝刺狀態
 
         # 噩夢模式效果
         self.gravity_reversal_time = 0
