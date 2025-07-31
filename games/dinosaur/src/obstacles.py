@@ -184,6 +184,36 @@ class Obstacle:
             self.health = 3
             self.original_color = self.colors["BLUE"]
 
+        elif self.obstacle_type == "meteor":
+            # 隕石障礙物（從天而降，非常危險但可被護盾阻擋）
+            self.width = int(50 * scale_factor)  # 增大隕石尺寸
+            self.height = int(55 * scale_factor)
+            if is_gravity_reversed:
+                # 重力反轉時，隕石從地面向上飛
+                self.y = self.ground_height
+                self.fall_speed = -6 * scale_factor  # 稍微慢一點，更容易躲避
+            else:
+                # 正常重力時，隕石從天空墜落
+                self.y = int(-60 * scale_factor)
+                self.fall_speed = 6 * scale_factor  # 稍微慢一點，更容易躲避
+            self.color = self.colors["ORANGE"]
+            self.warning_time = 200  # 增加到3.3秒警告時間，讓玩家有更多反應時間
+            self.is_warned = True
+            self.warning_sound_played = False  # 確保警告音效只播放一次
+            self.fire_trail = []  # 火焰尾跡
+            self.impact_effect = 0  # 撞擊效果
+            self.has_landed = False
+            # 為隕石生成固定的裂紋圖案
+            random.seed(hash((self.x, self.obstacle_type)) % 1000)  # 使用位置作為種子
+            self.crack_pattern = []
+            for i in range(4):
+                start_x = 5 + random.randint(0, self.width - 10)
+                start_y = 5 + random.randint(0, self.height - 10)
+                end_x = start_x + random.randint(-8, 8)
+                end_y = start_y + random.randint(-8, 8)
+                self.crack_pattern.append(((start_x, start_y), (end_x, end_y)))
+            random.seed()  # 重置隨機種子
+
     def update(self):
         """更新障礙物狀態"""
         self.animation_counter += 1
@@ -216,6 +246,43 @@ class Obstacle:
             if self.explosion_radius > 60:
                 self.is_exploding = False
 
+        elif self.obstacle_type == "meteor":
+            # 隕石墜落邏輯
+            if self.warning_time > 0:
+                self.warning_time -= 1
+            else:
+                # 開始墜落/上升
+                self.y += self.fall_speed
+
+                # 更新火焰尾跡
+                self.fire_trail.append(
+                    (self.x + self.width // 2, self.y + self.height // 2)
+                )
+                if len(self.fire_trail) > 8:
+                    self.fire_trail.pop(0)
+
+                # 檢查是否撞擊地面/天花板
+                if not self.has_landed:
+                    if (
+                        not hasattr(self, "fall_speed") or self.fall_speed > 0
+                    ):  # 向下墜落
+                        if self.y >= self.ground_height - self.height:
+                            self.y = self.ground_height - self.height
+                            self.has_landed = True
+                            self.impact_effect = 30  # 撞擊效果持續時間
+                            # 隕石撞擊需要通過外部方式播放音效，這裡只設置標記
+                            self.just_landed = True
+                    else:  # 向上飛行（重力反轉）
+                        if self.y <= 50:
+                            self.y = 50
+                            self.has_landed = True
+                            self.impact_effect = 30
+                            self.just_landed = True
+
+                # 撞擊效果遞減
+                if self.impact_effect > 0:
+                    self.impact_effect -= 1
+
     def draw(self, screen):
         """繪製障礙物"""
         if self.obstacle_type == "flying":
@@ -236,6 +303,8 @@ class Obstacle:
             self._draw_explosive_obstacle(screen)
         elif self.obstacle_type == "armored":
             self._draw_armored_obstacle(screen)
+        elif self.obstacle_type == "meteor":
+            self._draw_meteor_obstacle(screen)
         else:
             self._draw_normal_obstacle(screen)
 
@@ -421,6 +490,119 @@ class Obstacle:
                 screen, self.colors["WHITE"], (self.x + 5 + i * 8, self.y + 5), 3
             )
 
+    def _draw_meteor_obstacle(self, screen):
+        """繪製隕石障礙物"""
+        if self.warning_time > 0:
+            # 警告階段 - 顯示隕石即將墜落的位置，效果更明顯
+
+            # 多層警告效果
+            for layer in range(3):
+                warning_alpha = int(
+                    80 + 150 * math.sin(self.animation_counter * 0.3 + layer * 0.5)
+                )
+                warning_size = (
+                    self.width + 30 + layer * 10,
+                    self.height + 30 + layer * 10,
+                )
+                warning_surface = pygame.Surface(warning_size)
+                warning_surface.set_alpha(warning_alpha)
+                warning_surface.fill(
+                    self.colors["RED"] if layer % 2 == 0 else self.colors["ORANGE"]
+                )
+
+                # 計算警告位置
+                if hasattr(self, "fall_speed") and self.fall_speed < 0:  # 重力反轉
+                    warning_y = 50 - 15 - layer * 5
+                else:  # 正常重力
+                    warning_y = self.ground_height - self.height - 15 - layer * 5
+
+                warning_x = self.x - 15 - layer * 5
+                screen.blit(warning_surface, (warning_x, warning_y))
+
+            # 更大更明顯的警告文字
+            warning_text = "☄️ 危險！"
+            font = pygame.font.Font(None, 48)  # 更大的字體
+            text_surface = font.render(warning_text, True, self.colors["YELLOW"])
+            text_x = self.x + self.width // 2 - text_surface.get_width() // 2
+            if hasattr(self, "fall_speed") and self.fall_speed < 0:
+                text_y = 60
+            else:
+                text_y = self.ground_height - self.height - 50
+            screen.blit(text_surface, (text_x, text_y))
+
+            # 添加閃爍的邊框
+            if int(self.animation_counter / 10) % 2 == 0:
+                border_rect = pygame.Rect(
+                    self.x - 20,
+                    (
+                        warning_y
+                        if hasattr(self, "fall_speed") and self.fall_speed >= 0
+                        else 40
+                    ),
+                    self.width + 40,
+                    self.height + 40,
+                )
+                pygame.draw.rect(screen, self.colors["YELLOW"], border_rect, 5)
+        else:
+            # 墜落階段 - 繪製隕石本體
+
+            # 繪製火焰尾跡
+            for i, (trail_x, trail_y) in enumerate(self.fire_trail):
+                trail_alpha = int(255 * (i + 1) / len(self.fire_trail))
+                trail_size = max(4, (i + 1) * 3)  # 更大的火焰尾跡
+
+                # 創建帶透明度的火焰效果
+                trail_surface = pygame.Surface((trail_size * 2, trail_size * 2))
+                trail_surface.set_alpha(trail_alpha)
+                trail_surface.fill(
+                    self.colors["ORANGE"] if i % 2 == 0 else self.colors["RED"]
+                )
+                screen.blit(trail_surface, (trail_x - trail_size, trail_y - trail_size))
+
+            # 隕石本體 - 石頭質感
+            pygame.draw.ellipse(
+                screen,
+                self.colors["DARK_GRAY"],
+                (self.x, self.y, self.width, self.height),
+            )
+
+            # 隕石的發光邊緣
+            pygame.draw.ellipse(
+                screen,
+                self.colors["ORANGE"],
+                (self.x, self.y, self.width, self.height),
+                3,
+            )
+
+            # 隕石表面的裂紋
+            if hasattr(self, "crack_pattern"):
+                for (start_x, start_y), (end_x, end_y) in self.crack_pattern:
+                    pygame.draw.line(
+                        screen,
+                        self.colors["BLACK"],
+                        (self.x + start_x, self.y + start_y),
+                        (self.x + end_x, self.y + end_y),
+                        2,
+                    )
+
+            # 撞擊效果
+            if self.impact_effect > 0:
+                impact_radius = int((30 - self.impact_effect) * 2)
+                if impact_radius > 0:
+                    impact_surface = pygame.Surface(
+                        (impact_radius * 2, impact_radius * 2)
+                    )
+                    impact_alpha = int(self.impact_effect * 8)
+                    impact_surface.set_alpha(impact_alpha)
+                    impact_surface.fill(self.colors["YELLOW"])
+                    screen.blit(
+                        impact_surface,
+                        (
+                            self.x + self.width // 2 - impact_radius,
+                            self.y + self.height // 2 - impact_radius,
+                        ),
+                    )
+
     def _draw_normal_obstacle(self, screen):
         """繪製普通障礙物"""
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
@@ -522,11 +704,18 @@ class ObstacleManager:
         from config.game_config import Difficulty
 
         if difficulty == Difficulty.EASY:
-            obstacle_types = ["normal", "tall", "wide", "short"]
+            obstacle_types = ["normal", "tall", "wide", "short"]  # 移除隕石
             if is_gravity_reversed:
                 obstacle_types = ["flying", "short", "normal"]
         elif difficulty == Difficulty.MEDIUM:
-            obstacle_types = ["normal", "tall", "wide", "short", "flying", "tall_rock"]
+            obstacle_types = [
+                "normal",
+                "tall",
+                "wide",
+                "short",
+                "flying",
+                "tall_rock",
+            ]  # 移除隕石
             if is_gravity_reversed:
                 obstacle_types = ["flying", "flying", "short", "normal"]
         elif difficulty == Difficulty.HARD:
@@ -539,6 +728,7 @@ class ObstacleManager:
                 "double",
                 "tall_rock",
                 "hanging_rock",
+                # 移除所有隕石
             ]
             if is_gravity_reversed:
                 obstacle_types = [
@@ -548,6 +738,7 @@ class ObstacleManager:
                     "short",
                     "normal",
                     "hanging_rock",
+                    # 移除隕石
                 ]
         else:  # NIGHTMARE - 保持簡單但速度極快
             obstacle_types = [
@@ -558,6 +749,7 @@ class ObstacleManager:
                 "double",
                 "tall_rock",
                 "hanging_rock",
+                # 移除所有隕石
             ]
             if is_gravity_reversed:
                 obstacle_types = [
@@ -567,12 +759,17 @@ class ObstacleManager:
                     "double",
                     "normal",
                     "hanging_rock",
+                    # 移除隕石
                 ]
 
         return obstacle_types
 
     def spawn_obstacle(
-        self, difficulty, obstacle_spawn_rate, is_gravity_reversed=False
+        self,
+        difficulty,
+        obstacle_spawn_rate,
+        is_gravity_reversed=False,
+        sound_manager=None,
     ):
         """
         生成新的障礙物
@@ -581,6 +778,7 @@ class ObstacleManager:
             difficulty (int): 難度等級
             obstacle_spawn_rate (float): 障礙物生成速率
             is_gravity_reversed (bool): 是否重力反轉
+            sound_manager: 音效管理器（可選）
         """
         if self.spawn_timer <= 0:
             obstacle_types = self.get_obstacle_types_for_difficulty(
@@ -588,15 +786,18 @@ class ObstacleManager:
             )
             obstacle_type = random.choice(obstacle_types)
 
-            self.obstacles.append(
-                Obstacle(
-                    obstacle_type=obstacle_type,
-                    screen_width=self.screen_width,
-                    screen_height=self.screen_height,
-                    ground_height=self.ground_height,
-                    is_gravity_reversed=is_gravity_reversed,
-                )
+            new_obstacle = Obstacle(
+                obstacle_type=obstacle_type,
+                screen_width=self.screen_width,
+                screen_height=self.screen_height,
+                ground_height=self.ground_height,
+                is_gravity_reversed=is_gravity_reversed,
             )
+
+            self.obstacles.append(new_obstacle)
+
+            # 如果生成的是隕石，不在這裡播放音效，而是在更新時播放
+            # 這樣可以讓音效和視覺效果同步
 
             # 根據難度調整生成間隔，簡化邏輯
             base_interval = max(20, int(100 / obstacle_spawn_rate))
@@ -608,16 +809,18 @@ class ObstacleManager:
         else:
             self.spawn_timer -= 1
 
-    def update(self, game_speed):
+    def update(self, game_speed, sound_manager=None):
         """
         更新所有障礙物
 
         Args:
             game_speed (float): 遊戲速度
+            sound_manager: 音效管理器（可選）
         """
         for obstacle in self.obstacles[:]:
             obstacle.speed = game_speed
             obstacle.update()
+
             if obstacle.x + obstacle.width < 0:
                 self.obstacles.remove(obstacle)
 

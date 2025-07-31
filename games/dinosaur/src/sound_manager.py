@@ -231,24 +231,6 @@ class SoundManager:
         """播放跳躍音效 - 高頻短促的 popcat"""
         self.play_popcat_async(1500, 100)
 
-    def play_duck_sound(self):
-        """播放蹲下音效 - 中頻的 popcat"""
-        self.play_popcat_async(1200, 120)
-
-    def play_dash(self):
-        """播放衝刺音效 - 快速三連 Popcat"""
-        frequencies = [1400, 1500, 1600]
-        for i, freq in enumerate(frequencies):
-
-            def play_delayed(frequency, delay):
-                def delayed_play():
-                    time.sleep(delay)
-                    self.play_popcat_async(frequency, 60)
-
-                threading.Thread(target=delayed_play, daemon=True).start()
-
-            play_delayed(freq, i * 0.03)
-
     def play_shield(self):
         """播放護盾音效 - 低到高的 Popcat"""
         self.play_popcat_async(1000, 150)
@@ -303,6 +285,78 @@ class SoundManager:
                 threading.Thread(target=delayed_play, daemon=True).start()
 
             play_delayed(freq, dur, i * 0.15)  # 每 150ms 播放一個音
+
+    def play_lightning_sound(self):
+        """播放閃電音效 - 急促的高頻爆裂聲"""
+        # 模擬閃電的多層音效
+        # 第一層：急促的高頻爆裂音
+        frequencies = [2000, 2400, 1800, 2200, 1600]  # 高頻率範圍
+        durations = [30, 25, 35, 20, 40]  # 短促時長
+
+        for i, (freq, dur) in enumerate(zip(frequencies, durations)):
+
+            def play_delayed(frequency, duration, delay):
+                def delayed_play():
+                    time.sleep(delay)
+                    self.play_popcat_async(frequency, duration)
+
+                threading.Thread(target=delayed_play, daemon=True).start()
+
+            play_delayed(freq, dur, i * 0.02)  # 每 20ms 播放一個音
+
+    def play_meteor_warning_sound(self):
+        """播放隕石警告音效 - 急促的上升警告音"""
+        frequencies = [1000, 1200, 1400, 1600]  # 上升音階
+        for i, freq in enumerate(frequencies):
+
+            def play_delayed(frequency, delay):
+                def delayed_play():
+                    time.sleep(delay)
+                    self.play_popcat_async(frequency, 60)  # 短促警告音
+
+                threading.Thread(target=delayed_play, daemon=True).start()
+
+            play_delayed(freq, i * 0.05)  # 快速連續播放
+
+    def play_meteor_impact_sound(self):
+        """播放隕石撞擊音效 - 低沉的轟鳴聲"""
+        # 模擬撞擊的多層音效
+        # 第一層：低頻撞擊音
+        self.play_popcat_async(400, 300)
+
+        # 第二層：中頻振動音（延遲播放）
+        def delayed_mid_freq():
+            time.sleep(0.1)
+            self.play_popcat_async(600, 200)
+
+        threading.Thread(target=delayed_mid_freq, daemon=True).start()
+
+        # 第三層：高頻余響（再延遲播放）
+        def delayed_high_freq():
+            time.sleep(0.2)
+            self.play_popcat_async(1000, 150)
+
+        threading.Thread(target=delayed_high_freq, daemon=True).start()
+
+    def play_game_start_sound(self):
+        """播放遊戲開始音效 - 激勵的上升音階"""
+        # 三連音上升音階，營造開始的興奮感
+        # 第一個音：低音開始
+        self.play_popcat_async(523, 200)  # C5
+
+        # 第二個音：中音（延遲播放）
+        def delayed_mid_note():
+            time.sleep(0.25)
+            self.play_popcat_async(659, 200)  # E5
+
+        threading.Thread(target=delayed_mid_note, daemon=True).start()
+
+        # 第三個音：高音結尾（再延遲播放）
+        def delayed_high_note():
+            time.sleep(0.5)
+            self.play_popcat_async(784, 300)  # G5，稍長一點作為結尾
+
+        threading.Thread(target=delayed_high_note, daemon=True).start()
 
     def set_volume(self, volume):
         """
@@ -806,10 +860,14 @@ class SoundManager:
 
     def toggle_background_music(self):
         """切換背景音樂開關"""
-        if self.is_music_playing:
-            self.stop_background_music()
-        else:
+        self.background_music_enabled = not self.background_music_enabled
+
+        if self.background_music_enabled:
+            print("🎵 背景音樂已開啟")
             self.start_background_music()
+        else:
+            print("🔇 背景音樂已關閉")
+            self.stop_background_music()
 
     def set_music_volume(self, volume):
         """設置背景音樂音量"""

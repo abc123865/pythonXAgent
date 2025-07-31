@@ -42,13 +42,9 @@ class Dinosaur:
         self.jump_speed = 0
         self.gravity = Physics.GRAVITY * scale_factor
         self.is_jumping = False
-        self.is_ducking = False
         self.jump_strength = Physics.JUMP_STRENGTH * scale_factor
 
         # 特殊技能
-        self.dash_cooldown = 0
-        self.dash_distance = 0
-        self.is_dashing = False
         self.shield_time = 0
         self.has_shield = False
         self.double_jump_available = False
@@ -73,7 +69,7 @@ class Dinosaur:
         if self.ability_malfunction_time > 0:
             return
 
-        if not self.is_jumping and not self.is_ducking:
+        if not self.is_jumping:
             # 根據重力狀態調整跳躍
             jump_strength = self.jump_strength
             if self.is_gravity_reversed:
@@ -90,23 +86,6 @@ class Dinosaur:
             self.jump_speed = jump_strength
             self.double_jump_available = False
 
-    def dash(self):
-        """執行衝刺技能"""
-        # 檢查能力是否故障
-        if self.ability_malfunction_time > 0:
-            return
-
-        if self.dash_cooldown <= 0 and not self.is_dashing:
-            self.is_dashing = True
-            self.dash_distance = 80
-            # 噩夢模式冷卻時間更長
-            base_cooldown = 180
-            if hasattr(self, "nightmare_effects"):
-                base_cooldown = int(
-                    base_cooldown * (1 + self.nightmare_effects["time_distortion"])
-                )
-            self.dash_cooldown = base_cooldown
-
     def activate_shield(self):
         """啟動護盾技能"""
         # 檢查能力是否故障
@@ -117,58 +96,12 @@ class Dinosaur:
             self.has_shield = True
             self.shield_time = 300  # 5秒護盾時間
 
-    def duck(self):
-        """蹲下動作"""
-        if not self.is_jumping:
-            if not self.is_gravity_reversed:
-                # 正常重力時的蹲下
-                self.is_ducking = True
-                self.height = int(self.original_height * 0.5)
-                self.y = self.ground_height - self.height
-            else:
-                # 重力反轉時的蹲下（在天花板附近）
-                self.is_ducking = True
-                self.height = int(self.original_height * 0.5)
-                self.y = 50  # 貼近天花板
-        elif self.is_jumping:
-            # 在跳躍時按蹲下立刻回到地面
-            if not self.is_gravity_reversed:
-                # 正常重力時：立刻設置為地面位置並停止跳躍
-                self.y = self.ground_height - self.height
-                self.is_jumping = False
-                self.jump_speed = 0
-                self.is_ducking = True
-                self.height = int(self.original_height * 0.5)
-                self.y = self.ground_height - self.height
-            else:
-                # 重力反轉時：立刻回到天花板位置
-                self.y = 50
-                self.is_jumping = False
-                self.jump_speed = 0
-                self.is_ducking = True
-                self.height = int(self.original_height * 0.5)
-
-    def stand_up(self):
-        """站起來動作"""
-        if not self.is_jumping:
-            self.is_ducking = False
-            self.height = self.original_height
-            if not self.is_gravity_reversed:
-                # 正常重力時站在地面
-                self.y = self.ground_height - self.original_height
-            else:
-                # 重力反轉時站在天花板
-                self.y = 50
-
     def update(self):
         """更新恐龍狀態"""
         self.animation_frame += 1
 
         # 處理噩夢模式效果
         self._update_nightmare_effects()
-
-        # 處理衝刺邏輯
-        self._update_dash()
 
         # 更新冷卻時間
         self._update_cooldowns()
@@ -214,21 +147,8 @@ class Dinosaur:
         if self.ability_malfunction_time > 0:
             self.ability_malfunction_time -= 1
 
-    def _update_dash(self):
-        """更新衝刺狀態"""
-        if self.is_dashing and self.dash_distance > 0:
-            move_amount = min(8, self.dash_distance)
-            self.x += move_amount
-            self.dash_distance -= move_amount
-            if self.dash_distance <= 0:
-                self.is_dashing = False
-                self.x = max(80, self.x)  # 確保不會超出螢幕
-
     def _update_cooldowns(self):
         """更新技能冷卻時間"""
-        if self.dash_cooldown > 0:
-            self.dash_cooldown -= 1
-
         if self.shield_time > 0:
             self.shield_time -= 1
             if self.shield_time <= 0:
@@ -291,14 +211,8 @@ class Dinosaur:
         pygame.draw.rect(screen, dino_color, (self.x, self.y, self.width, self.height))
 
         # 恐龍的眼睛
-        eye_y = self.y + 10 if not self.is_ducking else self.y + 5
+        eye_y = self.y + 10
         pygame.draw.circle(screen, self.colors["BLACK"], (self.x + 10, eye_y), 3)
-
-        # 蹲下時的特殊形狀
-        if self.is_ducking:
-            pygame.draw.rect(
-                screen, self.colors["DARK_GREEN"], (self.x, self.y, self.width, 5)
-            )
 
         # 二段跳指示器
         if self.double_jump_available:

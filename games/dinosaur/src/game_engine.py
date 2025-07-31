@@ -9,6 +9,7 @@ import pygame
 import sys
 import random
 import os
+import json
 from config.game_config import (
     DEFAULT_SCREEN_WIDTH,
     DEFAULT_SCREEN_HEIGHT,
@@ -79,6 +80,11 @@ class Game:
         # 遊戲狀態
         self.score = 0
         self.high_score = 0
+        self.high_score_file = "high_score.json"  # 高分記錄檔案
+        self.load_high_score()  # 載入高分記錄
+
+        # 更新選單系統的高分顯示
+        self.menu_system.update_high_score(self.high_score)
         self.game_over = False
         self.cloud_timer = 0
         self.game_speed = 5
@@ -98,13 +104,18 @@ class Game:
         # 噩夢模式螢幕閃爍效果
         self.screen_flicker_timer = 0
         self.screen_flicker_duration = 0
-        self.next_flicker_time = 0
+        self.next_flicker_time = random.randint(120, 480)  # 隨機 2-8秒
 
         # 日夜轉換動畫效果
         self.transition_progress = 0  # 0-1之間，0=完全白天，1=完全夜晚
         self.transition_speed = 0.02  # 每幀的轉換速度
         self.current_cycle = 0  # 當前的日夜週期
         self.is_transitioning = False  # 是否正在轉換
+        
+        # 遊戲開始視覺反饋
+        self.game_start_flash_timer = 0
+        self.game_start_flash_duration = 90  # 1.5秒的閃爍提示
+        self.is_game_starting = False
 
         print("🎮 遊戲引擎初始化完成")
 
@@ -225,7 +236,14 @@ class Game:
         # 重置螢幕閃爍效果
         self.screen_flicker_timer = 0
         self.screen_flicker_duration = 0
-        self.next_flicker_time = 300  # 5秒 (60FPS * 5)
+        self.next_flicker_time = random.randint(120, 480)  # 隨機 2-8秒
+        
+        # 啟動遊戲開始視覺反饋
+        self.is_game_starting = True
+        self.game_start_flash_timer = 0
+        
+        # 播放遊戲開始音效
+        self.sound_manager.play_game_start_sound()
 
         # 重置日夜轉換效果
         self.transition_progress = 0
@@ -255,6 +273,62 @@ class Game:
         """返回主選單"""
         self.game_state = GameState.MENU
         self.menu_system.selected_index = 0
+
+    def load_high_score(self):
+        """載入高分記錄檔案"""
+        try:
+            if os.path.exists(self.high_score_file):
+                with open(self.high_score_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    # 支援舊版本和新版本的資料格式
+                    if isinstance(data, dict):
+                        self.high_score = data.get("high_score", 0)
+                        print(f"📊 載入最高分記錄: {self.high_score}")
+                    else:
+                        # 舊版本格式，只有一個數字
+                        self.high_score = data
+                        print(f"📊 載入最高分記錄 (舊格式): {self.high_score}")
+            else:
+                self.high_score = 0
+                print("📊 未找到高分記錄檔案，初始化為 0")
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            print(f"⚠️ 載入高分記錄時發生錯誤: {e}")
+            self.high_score = 0
+
+    def save_high_score(self):
+        """儲存高分記錄到檔案"""
+        try:
+            # 準備要儲存的資料
+            data = {
+                "high_score": self.high_score,
+                "last_updated": pygame.time.get_ticks(),  # 儲存時間戳
+                "version": "2.0",  # 標記版本
+            }
+
+            with open(self.high_score_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(f"💾 高分記錄已儲存: {self.high_score}")
+        except Exception as e:
+            print(f"⚠️ 儲存高分記錄時發生錯誤: {e}")
+
+    def update_high_score(self, new_score):
+        """
+        更新最高分記錄
+
+        Args:
+            new_score (int): 新的分數
+
+        Returns:
+            bool: 是否創造了新記錄
+        """
+        if new_score > self.high_score:
+            self.high_score = new_score
+            self.save_high_score()
+            # 同時更新選單系統的高分顯示
+            if hasattr(self, "menu_system"):
+                self.menu_system.update_high_score(self.high_score)
+            return True
+        return False
 
     def handle_events(self):
         """處理遊戲事件"""
@@ -324,26 +398,12 @@ class Game:
                                 hasattr(self.dinosaur, "is_control_inverted")
                                 and self.dinosaur.is_control_inverted
                             ):
-                                self.dinosaur.duck()
+                                pass  # 控制反轉時跳躍鍵無效
                             else:
                                 self.dinosaur.jump()
                         else:
                             self.sound_manager.play_menu_select()
                             self.start_game(self.selected_difficulty)
-                    elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                        if not self.game_over:
-                            self.sound_manager.play_key_press()
-                            if (
-                                hasattr(self.dinosaur, "is_control_inverted")
-                                and self.dinosaur.is_control_inverted
-                            ):
-                                self.dinosaur.jump()
-                            else:
-                                self.dinosaur.duck()
-                    elif event.key == pygame.K_x:
-                        if not self.game_over:
-                            self.sound_manager.play_dash()
-                            self.dinosaur.dash()
                     elif event.key == pygame.K_z:
                         if not self.game_over:
                             self.sound_manager.play_shield()
@@ -356,13 +416,7 @@ class Game:
                         self.sound_manager.play_key_press()
 
                 elif event.type == pygame.KEYUP:
-                    if event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                        if not self.game_over:
-                            if not (
-                                hasattr(self.dinosaur, "is_control_inverted")
-                                and self.dinosaur.is_control_inverted
-                            ):
-                                self.dinosaur.stand_up()
+                    pass  # 移除蹲下按鍵抬起處理
         return True
 
     def update(self):
@@ -371,6 +425,13 @@ class Game:
             self.menu_system.update()
 
         elif self.game_state == GameState.PLAYING:
+            # 更新遊戲開始視覺反饋
+            if self.is_game_starting:
+                self.game_start_flash_timer += 1
+                if self.game_start_flash_timer >= self.game_start_flash_duration:
+                    self.is_game_starting = False
+                    self.game_start_flash_timer = 0
+            
             if not self.game_over:
                 # 噩夢模式的特殊效果
                 if self.selected_difficulty >= Difficulty.NIGHTMARE:
@@ -402,8 +463,9 @@ class Game:
                     self.selected_difficulty,
                     self.obstacle_spawn_rate,
                     is_gravity_reversed,
+                    self.sound_manager,  # 傳入音效管理器
                 )
-                self.obstacle_manager.update(self.game_speed)
+                self.obstacle_manager.update(self.game_speed, self.sound_manager)
 
                 # 生成雲朵
                 self.spawn_cloud()
@@ -414,8 +476,8 @@ class Game:
                     self.game_over = True
                     # 播放死亡音效
                     self.sound_manager.play_death_sound()
-                    if self.score > self.high_score:
-                        self.high_score = self.score
+                    # 檢查並更新最高分記錄
+                    if self.update_high_score(self.score):
                         print(f"🎉 新紀錄！分數: {self.high_score}")
 
             # 減少螢幕震動
@@ -559,9 +621,12 @@ class Game:
             # 開始新的閃爍效果
             self.screen_flicker_duration = random.randint(30, 90)  # 0.5-1.5秒閃爍
             self.screen_flicker_timer = 0
-            # 設定下一次閃爍時間 (5秒後)
-            self.next_flicker_time = 300  # 5秒 (60FPS * 5)
+            # 設定下一次閃爍時間 (隨機 2-8秒後)
+            self.next_flicker_time = random.randint(120, 480)  # 隨機 2-8秒
             print("💥 噩夢模式：螢幕閃爍開始！")
+
+            # 播放閃電音效
+            self.sound_manager.play_lightning_sound()
 
         # 減少閃爍持續時間
         if self.screen_flicker_duration > 0:
@@ -640,6 +705,70 @@ class Game:
                     stripe_surface.set_alpha(int(255 * flicker_intensity))
                     stripe_surface.fill(flicker_color)
                     self.screen.blit(stripe_surface, (0, i * stripe_height))
+
+    def draw_game_start_flash(self):
+        """繪製遊戲開始的閃爍效果"""
+        # 計算閃爍進度 (0-1)
+        flash_progress = self.game_start_flash_timer / self.game_start_flash_duration
+        
+        # 使用正弦波創造平滑的脈衝效果
+        import math
+        pulse_intensity = (math.sin(flash_progress * math.pi * 6) + 1) / 2
+        
+        # 從強烈開始逐漸減弱
+        fade_factor = 1 - flash_progress
+        final_intensity = pulse_intensity * fade_factor
+        
+        # 創建彩色邊框閃爍效果
+        if final_intensity > 0.1:
+            border_width = int(20 * final_intensity)
+            alpha = int(150 * final_intensity)
+            
+            # 彩色邊框 - 使用綠色表示開始
+            for i in range(border_width):
+                color_intensity = 1 - (i / border_width)
+                green_value = int(255 * color_intensity * final_intensity)
+                border_color = (0, green_value, int(green_value * 0.5))
+                
+                # 畫邊框矩形
+                pygame.draw.rect(
+                    self.screen,
+                    border_color,
+                    (i, i, self.screen_width - i * 2, self.screen_height - i * 2),
+                    2
+                )
+            
+            # 中央文字提示
+            if flash_progress < 0.8:  # 前80%時間顯示文字
+                center_x = self.screen_width // 2
+                center_y = self.screen_height // 3
+                
+                # 根據難度顯示不同的開始文字
+                difficulty_names = {
+                    Difficulty.EASY: "🌟 簡單模式開始！",
+                    Difficulty.MEDIUM: "⚡ 中等模式開始！", 
+                    Difficulty.HARD: "🔥 困難模式開始！",
+                    Difficulty.NIGHTMARE: "💀 噩夢模式開始！"
+                }
+                
+                start_text = difficulty_names.get(self.selected_difficulty, "🎮 遊戲開始！")
+                text_alpha = int(255 * (1 - flash_progress / 0.8))
+                
+                # 創建文字表面
+                text_surface = self.font_large.render(start_text, True, (0, 255, 0))
+                text_surface.set_alpha(text_alpha)
+                
+                # 居中顯示
+                text_rect = text_surface.get_rect(center=(center_x, center_y))
+                self.screen.blit(text_surface, text_rect)
+                
+                # 添加副標題
+                subtitle_text = "準備好了嗎？"
+                subtitle_alpha = int(200 * (1 - flash_progress / 0.8))
+                subtitle_surface = self.font_medium.render(subtitle_text, True, (255, 255, 255))
+                subtitle_surface.set_alpha(subtitle_alpha)
+                subtitle_rect = subtitle_surface.get_rect(center=(center_x, center_y + 50))
+                self.screen.blit(subtitle_surface, subtitle_rect)
 
     def get_background_color(self):
         """根據分數和難度計算背景顏色 (平滑的日夜轉換效果)"""
@@ -739,25 +868,19 @@ class Game:
                     obstacle_score = self.calculate_obstacle_score(8)
                     self.score += obstacle_score
                     continue
-                elif obstacle.obstacle_type == "tall_rock" and self.dinosaur.is_ducking:
-                    # 高石頭：必須蹲下才能通過，不蹲下就死亡
-                    # 蹲下通過不給額外分數，因為這是必須的操作
-                    continue
-                elif obstacle.can_duck_under() and self.dinosaur.is_ducking:
-                    self.combo_count += 1
-                    obstacle_score = self.calculate_obstacle_score(10)
-                    self.score += obstacle_score
-                    continue
                 elif self.dinosaur.has_shield:
                     self.dinosaur.has_shield = False
                     self.dinosaur.shield_time = 0
                     self.screen_shake = 10
 
+                    # 爆炸障礙物的特殊處理
                     if obstacle.obstacle_type == "explosive":
                         obstacle.trigger_explosion()
 
                     if obstacle in self.obstacle_manager.obstacles:
                         self.obstacle_manager.obstacles.remove(obstacle)
+
+                    # 統一的護盾分數獎勵
                     obstacle_score = self.calculate_obstacle_score(20)
                     self.score += obstacle_score
                     continue
@@ -856,6 +979,10 @@ class Game:
             # 遊戲結束畫面
             if self.game_over:
                 self.draw_game_over_screen()
+            
+            # 遊戲開始閃爍效果
+            if self.is_game_starting and self.game_start_flash_timer > 0:
+                self.draw_game_start_flash()
 
             # 噩夢模式螢幕閃爍效果
             if (
@@ -992,16 +1119,6 @@ class Game:
                 )
                 self.screen.blit(
                     shield_surface, (margin, margin + line_height * current_line)
-                )
-                current_line += 1
-
-            if self.dinosaur.dash_cooldown > 0:
-                dash_text = f"衝刺冷卻: {self.dinosaur.dash_cooldown // 60 + 1}秒"
-                dash_surface = self.font_small.render(
-                    dash_text, True, self.colors["YELLOW"]
-                )
-                self.screen.blit(
-                    dash_surface, (margin, margin + line_height * current_line)
                 )
                 current_line += 1
 
@@ -1146,7 +1263,9 @@ class Game:
             )
 
         # 主要操作說明
-        instruction_text = "↑/空白鍵:跳躍  ↓/S鍵:蹲下  X:衝刺  Z:護盾  F1:音效  F2:音樂  F11:全螢幕  ESC:返回選單"
+        instruction_text = (
+            "↑/空白鍵:跳躍  Z:護盾  F1:音效  F2:音樂  F11:全螢幕  ESC:返回選單"
+        )
         instruction_surface = self.font_medium.render(
             instruction_text, True, instruction_color
         )
@@ -1157,7 +1276,7 @@ class Game:
 
         # 障礙物說明
         if self.selected_difficulty <= Difficulty.MEDIUM:
-            obstacles_text = "🌵 仙人掌需跳躍  🪨 石頭可走過  🐦 鳥類需蹲下"
+            obstacles_text = "🌵 仙人掌需跳躍  🪨 石頭可走過"
         else:
             obstacles_text = "⚡ 高難度！注意隱形、爆炸、移動障礙物！"
 

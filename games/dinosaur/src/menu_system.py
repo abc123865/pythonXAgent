@@ -14,7 +14,7 @@ from sound_manager import get_sound_manager
 class MenuSystem:
     """主選單系統"""
 
-    def __init__(self, screen_width, screen_height, fonts):
+    def __init__(self, screen_width, screen_height, fonts, high_score=0):
         """
         初始化選單系統
 
@@ -22,6 +22,7 @@ class MenuSystem:
             screen_width (int): 螢幕寬度
             screen_height (int): 螢幕高度
             fonts (dict): 字體字典
+            high_score (int): 最高分記錄
         """
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -30,6 +31,7 @@ class MenuSystem:
         self.selected_difficulty = Difficulty.EASY
         self.selected_index = 0
         self.animation_timer = 0
+        self.high_score = high_score
 
         # 音效管理器
         self.sound_manager = get_sound_manager()
@@ -44,6 +46,12 @@ class MenuSystem:
                     "description": settings["description"],
                 }
             )
+
+        # 調試輸出：確認所有難度選項都已加載
+        print(f"📋 選單選項已載入，共 {len(self.menu_options)} 個難度:")
+        for i, option in enumerate(self.menu_options):
+            print(f"   {i+1}. {option['name']} - {option['description']}")
+        print(f"📌 目前選中: {self.menu_options[self.selected_index]['name']}")
 
     def handle_menu_input(self, event):
         """
@@ -77,6 +85,10 @@ class MenuSystem:
         """更新選單動畫"""
         self.animation_timer += 1
 
+    def update_high_score(self, high_score):
+        """更新最高分記錄"""
+        self.high_score = high_score
+
     def draw(self, screen):
         """繪製主選單"""
         # 背景
@@ -87,6 +99,9 @@ class MenuSystem:
 
         # 遊戲標題
         self._draw_title(screen)
+
+        # 最高分顯示
+        self._draw_high_score(screen)
 
         # 選單選項
         self._draw_menu_options(screen)
@@ -129,9 +144,57 @@ class MenuSystem:
         )
         screen.blit(subtitle_surface, subtitle_rect)
 
+    def _draw_high_score(self, screen):
+        """繪製最高分記錄"""
+        if self.high_score > 0:
+            # 主要最高分文字
+            high_score_text = f"🏆 最高分記錄: {self.high_score:,}"
+            high_score_surface = self.fonts["medium"].render(
+                high_score_text, True, self.colors["YELLOW"]
+            )
+
+            # 添加發光效果
+            glow_surface = self.fonts["medium"].render(
+                high_score_text, True, self.colors["ORANGE"]
+            )
+
+            # 位置設定
+            high_score_y = int(self.screen_height * 0.20)
+            high_score_rect = high_score_surface.get_rect(
+                center=(self.screen_width // 2, high_score_y)
+            )
+            glow_rect = glow_surface.get_rect(
+                center=(self.screen_width // 2 + 2, high_score_y + 2)
+            )
+
+            # 繪製發光效果（稍微偏移）
+            screen.blit(glow_surface, glow_rect)
+            # 繪製主要文字
+            screen.blit(high_score_surface, high_score_rect)
+
+            # 添加閃爍效果
+            if int(self.animation_timer / 30) % 2 == 0:
+                sparkle_text = "✨"
+                sparkle_surface = self.fonts["small"].render(
+                    sparkle_text, True, self.colors["YELLOW"]
+                )
+                sparkle_x = high_score_rect.right + 10
+                screen.blit(sparkle_surface, (sparkle_x, high_score_y - 10))
+        else:
+            # 當沒有記錄時顯示鼓勵文字
+            no_record_text = "開始您的第一次挑戰！"
+            no_record_surface = self.fonts["small"].render(
+                no_record_text, True, self.colors["GRAY"]
+            )
+            no_record_y = int(self.screen_height * 0.20)
+            no_record_rect = no_record_surface.get_rect(
+                center=(self.screen_width // 2, no_record_y)
+            )
+            screen.blit(no_record_surface, no_record_rect)
+
     def _draw_menu_options(self, screen):
         """繪製選單選項"""
-        start_y = int(self.screen_height * 0.25)
+        start_y = int(self.screen_height * 0.30)  # 向下調整，為高分顯示留空間
         option_spacing = int(self.screen_height * 0.15)  # 恢復合理的間距
         selection_width = min(400, int(self.screen_width * 0.4))
 
@@ -181,17 +244,27 @@ class MenuSystem:
 
     def _draw_controls(self, screen):
         """繪製控制說明"""
-        control_text = (
-            "↑↓ 選擇難度  |  空白鍵/Enter 開始遊戲  |  F1 音效開關  |  F11 全螢幕"
+        # 主要控制說明（更醒目）
+        main_control_text = "🕹️ ↑↓ 選擇難度  |  空白鍵/Enter 開始遊戲"
+        main_control_surface = self.fonts["medium"].render(
+            main_control_text, True, self.colors["YELLOW"]
         )
-        control_surface = self.fonts["small"].render(
-            control_text, True, self.colors["WHITE"]
+        main_control_y = int(self.screen_height * 0.87)
+        main_control_rect = main_control_surface.get_rect(
+            center=(self.screen_width // 2, main_control_y)
         )
-        control_y = int(self.screen_height * 0.9)
-        control_rect = control_surface.get_rect(
-            center=(self.screen_width // 2, control_y)
+        screen.blit(main_control_surface, main_control_rect)
+
+        # 次要控制說明
+        sub_control_text = "F1 音效開關  |  F11 全螢幕  |  ESC 退出"
+        sub_control_surface = self.fonts["small"].render(
+            sub_control_text, True, self.colors["WHITE"]
         )
-        screen.blit(control_surface, control_rect)
+        sub_control_y = int(self.screen_height * 0.93)
+        sub_control_rect = sub_control_surface.get_rect(
+            center=(self.screen_width // 2, sub_control_y)
+        )
+        screen.blit(sub_control_surface, sub_control_rect)
 
     def _draw_difficulty_preview(self, screen):
         """繪製難度預覽"""
