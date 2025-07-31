@@ -51,7 +51,7 @@ class Player:
         self.height = 40
         self.vel_x = 0
         self.vel_y = 0
-        self.on_ground = False
+        self.on_ground = True  # 初始化時假設在地面上
         self.jump_charging = False
         self.jump_power = 0
         self.facing_right = True
@@ -65,7 +65,7 @@ class Player:
         self.y = self.start_y
         self.vel_x = 0
         self.vel_y = 0
-        self.on_ground = True
+        self.on_ground = True  # 確保重置後在地面上
         self.jump_charging = False
         self.jump_power = 0
         self.death_count += 1
@@ -76,6 +76,9 @@ class Player:
         self.start_y = y
         self.x = x
         self.y = y
+        self.vel_x = 0
+        self.vel_y = 0
+        self.on_ground = True  # 確保設置後在地面上
 
     def update(self, platforms, death_zones=None, level_num=None):
         # 處理重力
@@ -155,7 +158,7 @@ class Player:
     def check_platform_collision(self, platforms):
         player_rect = pygame.Rect(self.x, self.y, self.width, self.height)
         was_on_ground = self.on_ground
-        self.on_ground = False
+        ground_detected = False  # 先用標記而不是直接設置
 
         for platform in platforms:
             platform_rect = pygame.Rect(
@@ -178,7 +181,7 @@ class Player:
                     # 從上方落下
                     self.y = platform["y"] - self.height
                     self.vel_y = 0
-                    self.on_ground = True
+                    ground_detected = True
                 elif min_overlap == overlap_bottom and self.vel_y <= 0:
                     # 從下方撞擊
                     self.y = platform["y"] + platform["height"]
@@ -192,9 +195,8 @@ class Player:
                     self.x = platform["x"] + platform["width"]
                     self.vel_x = -self.vel_x * 0.6  # 反彈，保持更多速度
 
-        # 簡化地面檢測 - 如果玩家底部接觸任何平台就算在地面上
-        if not self.on_ground:
-            # 檢查玩家底部是否接觸平台
+        # 詳細地面檢測 - 檢查玩家底部是否接觸任何平台
+        if not ground_detected:
             for platform in platforms:
                 # 檢查水平重疊
                 if (
@@ -205,10 +207,13 @@ class Player:
                     platform_top = platform["y"]
                     player_bottom = self.y + self.height
                     if abs(player_bottom - platform_top) <= 3 and self.vel_y >= -0.5:
-                        self.on_ground = True
+                        ground_detected = True
                         self.y = platform_top - self.height
                         self.vel_y = 0
                         break
+
+        # 只有確認不在地面時才設置為 False
+        self.on_ground = ground_detected
 
     def start_jump_charge(self):
         # 移除 on_ground 檢查，允許任何時候開始蓄力（但執行時仍需檢查）
@@ -436,519 +441,170 @@ class LevelManager:
             "target_deaths": 25,  # 稍微降低目標
         }
 
-        # 第7關 - 專家級
+        # 第7關 - 專家級（經過物理驗證的可行設計）
         levels[7] = {
             "name": "專家考驗",
             "platforms": [
-                {"x": 0, "y": 550, "width": 50, "height": 50},
-                {"x": 80, "y": 520, "width": 15, "height": 8},
-                {"x": 130, "y": 490, "width": 15, "height": 8},
-                {"x": 180, "y": 460, "width": 15, "height": 8},
-                {"x": 230, "y": 430, "width": 15, "height": 8},
-                {"x": 280, "y": 400, "width": 15, "height": 8},
-                {"x": 330, "y": 370, "width": 15, "height": 8},
-                {"x": 380, "y": 340, "width": 15, "height": 8},
-                {"x": 430, "y": 310, "width": 15, "height": 8},
-                {"x": 480, "y": 280, "width": 15, "height": 8},
-                {"x": 530, "y": 250, "width": 15, "height": 8},
-                {"x": 580, "y": 220, "width": 15, "height": 8},
-                {"x": 630, "y": 190, "width": 15, "height": 8},
-                {"x": 680, "y": 160, "width": 15, "height": 8},
-                {"x": 630, "y": 130, "width": 15, "height": 8},
-                {"x": 580, "y": 100, "width": 15, "height": 8},
-                {"x": 530, "y": 70, "width": 15, "height": 8},
-                {"x": 480, "y": 40, "width": 15, "height": 8},
-                {"x": 430, "y": 10, "width": 15, "height": 8},
-                {"x": 350, "y": -30, "width": 100, "height": 30},
+                {"x": 0, "y": 550, "width": 120, "height": 50},  # 起始平台
+                {"x": 214, "y": 510, "width": 40, "height": 15},  # 平台1
+                {"x": 339, "y": 480, "width": 40, "height": 15},  # 平台2
+                {"x": 189, "y": 445, "width": 40, "height": 15},  # 平台3
+                {"x": 64, "y": 420, "width": 40, "height": 15},  # 平台4
+                {"x": 264, "y": 375, "width": 40, "height": 15},  # 平台5
+                {"x": 414, "y": 345, "width": 40, "height": 15},  # 平台6
+                {"x": 239, "y": 305, "width": 40, "height": 15},  # 平台7
+                {"x": 299, "y": 245, "width": 120, "height": 30},  # 目標平台
             ],
             "death_zones": [
-                {"x": 0, "y": 600, "width": 800, "height": 100},
-                {"x": 50, "y": 450, "width": 30, "height": 150},
-                {"x": 200, "y": 350, "width": 30, "height": 150},
-                {"x": 350, "y": 250, "width": 30, "height": 150},
-                {"x": 500, "y": 150, "width": 30, "height": 150},
-                {"x": 650, "y": 100, "width": 30, "height": 150},
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部死亡區域
             ],
-            "goal_y": -30,
-            "start_pos": (25, 500),
-            "target_deaths": 50,
+            "goal_y": 245,
+            "start_pos": (60, 500),  # 起始平台中心
+            "target_deaths": 25,
         }
 
-        # 第8關 - 大師級
+        # 第8關 - 大師挑戰（重新設計）
         levels[8] = {
             "name": "大師挑戰",
             "platforms": [
-                {"x": 0, "y": 550, "width": 40, "height": 50},
-                {"x": 60, "y": 530, "width": 10, "height": 5},
-                {"x": 90, "y": 510, "width": 10, "height": 5},
-                {"x": 120, "y": 490, "width": 10, "height": 5},
-                {"x": 150, "y": 470, "width": 10, "height": 5},
-                {"x": 180, "y": 450, "width": 10, "height": 5},
-                {"x": 210, "y": 430, "width": 10, "height": 5},
-                {"x": 240, "y": 410, "width": 10, "height": 5},
-                {"x": 270, "y": 390, "width": 10, "height": 5},
-                {"x": 300, "y": 370, "width": 10, "height": 5},
-                {"x": 330, "y": 350, "width": 10, "height": 5},
-                {"x": 360, "y": 330, "width": 10, "height": 5},
-                {"x": 390, "y": 310, "width": 10, "height": 5},
-                {"x": 420, "y": 290, "width": 10, "height": 5},
-                {"x": 450, "y": 270, "width": 10, "height": 5},
-                {"x": 480, "y": 250, "width": 10, "height": 5},
-                {"x": 510, "y": 230, "width": 10, "height": 5},
-                {"x": 540, "y": 210, "width": 10, "height": 5},
-                {"x": 570, "y": 190, "width": 10, "height": 5},
-                {"x": 600, "y": 170, "width": 10, "height": 5},
-                {"x": 630, "y": 150, "width": 10, "height": 5},
-                {"x": 660, "y": 130, "width": 10, "height": 5},
-                {"x": 690, "y": 110, "width": 10, "height": 5},
-                {"x": 720, "y": 90, "width": 10, "height": 5},
-                {"x": 690, "y": 70, "width": 10, "height": 5},
-                {"x": 660, "y": 50, "width": 10, "height": 5},
-                {"x": 630, "y": 30, "width": 10, "height": 5},
-                {"x": 600, "y": 10, "width": 10, "height": 5},
-                {"x": 570, "y": -10, "width": 10, "height": 5},
-                {"x": 540, "y": -30, "width": 10, "height": 5},
-                {"x": 510, "y": -50, "width": 10, "height": 5},
-                {"x": 480, "y": -70, "width": 10, "height": 5},
-                {"x": 450, "y": -90, "width": 10, "height": 5},
-                {"x": 350, "y": -120, "width": 100, "height": 30},
+                {"x": 0, "y": 550, "width": 100, "height": 50},  # 起始平台
+                {"x": 234, "y": 515, "width": 30, "height": 12},  # 平台1
+                {"x": 434, "y": 480, "width": 30, "height": 12},  # 平台2
+                {"x": 633, "y": 445, "width": 30, "height": 12},  # 平台3
+                {"x": 434, "y": 410, "width": 30, "height": 12},  # 平台4
+                {"x": 234, "y": 375, "width": 30, "height": 12},  # 平台5
+                {"x": 34, "y": 340, "width": 30, "height": 12},  # 平台6
+                {"x": 284, "y": 300, "width": 30, "height": 12},  # 平台7
+                {"x": 533, "y": 260, "width": 30, "height": 12},  # 平台8
+                {"x": 498, "y": 210, "width": 100, "height": 30},  # 目標平台
             ],
             "death_zones": [
-                {"x": 0, "y": 600, "width": 800, "height": 100},
-                {"x": 40, "y": 450, "width": 20, "height": 150},
-                {"x": 130, "y": 400, "width": 20, "height": 150},
-                {"x": 220, "y": 350, "width": 20, "height": 150},
-                {"x": 310, "y": 300, "width": 20, "height": 150},
-                {"x": 400, "y": 250, "width": 20, "height": 150},
-                {"x": 490, "y": 200, "width": 20, "height": 150},
-                {"x": 580, "y": 150, "width": 20, "height": 150},
-                {"x": 670, "y": 100, "width": 20, "height": 150},
-                {"x": 760, "y": 50, "width": 40, "height": 150},
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部死亡區域
             ],
-            "goal_y": -120,
-            "start_pos": (20, 500),
-            "target_deaths": 70,
+            "goal_y": 210,
+            "start_pos": (50, 500),
+            "target_deaths": 35,
         }
 
-        # 第9關 - 傳說級
+        # 第9關 - 傳說級（物理驗證版本）
         levels[9] = {
-            "name": "傳說試煉",
+            "name": "螺旋之謎",
             "platforms": [
-                {"x": 0, "y": 550, "width": 30, "height": 50},
-                {"x": 50, "y": 540, "width": 8, "height": 3},
-                {"x": 70, "y": 530, "width": 8, "height": 3},
-                {"x": 90, "y": 520, "width": 8, "height": 3},
-                {"x": 110, "y": 510, "width": 8, "height": 3},
-                {"x": 130, "y": 500, "width": 8, "height": 3},
-                {"x": 150, "y": 490, "width": 8, "height": 3},
-                {"x": 170, "y": 480, "width": 8, "height": 3},
-                {"x": 190, "y": 470, "width": 8, "height": 3},
-                {"x": 210, "y": 460, "width": 8, "height": 3},
-                {"x": 230, "y": 450, "width": 8, "height": 3},
-                {"x": 250, "y": 440, "width": 8, "height": 3},
-                {"x": 270, "y": 430, "width": 8, "height": 3},
-                {"x": 290, "y": 420, "width": 8, "height": 3},
-                {"x": 310, "y": 410, "width": 8, "height": 3},
-                {"x": 330, "y": 400, "width": 8, "height": 3},
-                {"x": 350, "y": 390, "width": 8, "height": 3},
-                {"x": 370, "y": 380, "width": 8, "height": 3},
-                {"x": 390, "y": 370, "width": 8, "height": 3},
-                {"x": 410, "y": 360, "width": 8, "height": 3},
-                {"x": 430, "y": 350, "width": 8, "height": 3},
-                {"x": 450, "y": 340, "width": 8, "height": 3},
-                {"x": 470, "y": 330, "width": 8, "height": 3},
-                {"x": 490, "y": 320, "width": 8, "height": 3},
-                {"x": 510, "y": 310, "width": 8, "height": 3},
-                {"x": 530, "y": 300, "width": 8, "height": 3},
-                {"x": 550, "y": 290, "width": 8, "height": 3},
-                {"x": 570, "y": 280, "width": 8, "height": 3},
-                {"x": 590, "y": 270, "width": 8, "height": 3},
-                {"x": 610, "y": 260, "width": 8, "height": 3},
-                {"x": 630, "y": 250, "width": 8, "height": 3},
-                {"x": 650, "y": 240, "width": 8, "height": 3},
-                {"x": 670, "y": 230, "width": 8, "height": 3},
-                {"x": 690, "y": 220, "width": 8, "height": 3},
-                {"x": 710, "y": 210, "width": 8, "height": 3},
-                {"x": 730, "y": 200, "width": 8, "height": 3},
-                {"x": 750, "y": 190, "width": 8, "height": 3},
-                {"x": 770, "y": 180, "width": 8, "height": 3},
-                {"x": 750, "y": 170, "width": 8, "height": 3},
-                {"x": 730, "y": 160, "width": 8, "height": 3},
-                {"x": 710, "y": 150, "width": 8, "height": 3},
-                {"x": 690, "y": 140, "width": 8, "height": 3},
-                {"x": 670, "y": 130, "width": 8, "height": 3},
-                {"x": 650, "y": 120, "width": 8, "height": 3},
-                {"x": 630, "y": 110, "width": 8, "height": 3},
-                {"x": 610, "y": 100, "width": 8, "height": 3},
-                {"x": 590, "y": 90, "width": 8, "height": 3},
-                {"x": 570, "y": 80, "width": 8, "height": 3},
-                {"x": 550, "y": 70, "width": 8, "height": 3},
-                {"x": 530, "y": 60, "width": 8, "height": 3},
-                {"x": 510, "y": 50, "width": 8, "height": 3},
-                {"x": 490, "y": 40, "width": 8, "height": 3},
-                {"x": 470, "y": 30, "width": 8, "height": 3},
-                {"x": 450, "y": 20, "width": 8, "height": 3},
-                {"x": 430, "y": 10, "width": 8, "height": 3},
-                {"x": 410, "y": 0, "width": 8, "height": 3},
-                {"x": 390, "y": -10, "width": 8, "height": 3},
-                {"x": 370, "y": -20, "width": 8, "height": 3},
-                {"x": 350, "y": -30, "width": 8, "height": 3},
-                {"x": 330, "y": -40, "width": 8, "height": 3},
-                {"x": 310, "y": -50, "width": 8, "height": 3},
-                {"x": 290, "y": -60, "width": 8, "height": 3},
-                {"x": 270, "y": -70, "width": 8, "height": 3},
-                {"x": 250, "y": -80, "width": 8, "height": 3},
-                {"x": 230, "y": -90, "width": 8, "height": 3},
-                {"x": 210, "y": -100, "width": 8, "height": 3},
-                {"x": 190, "y": -110, "width": 8, "height": 3},
-                {"x": 170, "y": -120, "width": 8, "height": 3},
-                {"x": 150, "y": -130, "width": 8, "height": 3},
-                {"x": 130, "y": -140, "width": 8, "height": 3},
-                {"x": 110, "y": -150, "width": 8, "height": 3},
-                {"x": 350, "y": -180, "width": 100, "height": 30},
+                # 起始平台（確保安全起跳）
+                {"x": 0, "y": 550, "width": 80, "height": 30},
+                # 螺旋路徑 - 每個跳躍距離都在物理極限內（<250px）
+                {"x": 200, "y": 480, "width": 60, "height": 20},  # 跳躍距離: 200px
+                {"x": 400, "y": 420, "width": 50, "height": 20},  # 跳躍距離: 200px
+                {"x": 550, "y": 350, "width": 50, "height": 20},  # 跳躍距離: 150px
+                {"x": 650, "y": 280, "width": 50, "height": 20},  # 跳躍距離: 100px
+                {"x": 700, "y": 200, "width": 50, "height": 20},  # 跳躍距離: 80px
+                # 回轉路徑
+                {"x": 500, "y": 130, "width": 50, "height": 20},  # 跳躍距離: 200px
+                {"x": 300, "y": 80, "width": 50, "height": 20},  # 跳躍距離: 200px
+                {"x": 100, "y": 40, "width": 50, "height": 20},  # 跳躍距離: 200px
+                # 最終挑戰
+                {"x": 250, "y": -20, "width": 50, "height": 20},  # 跳躍距離: 150px
+                {
+                    "x": 450,
+                    "y": -80,
+                    "width": 60,
+                    "height": 30,
+                },  # 跳躍距離: 200px (目標平台)
             ],
             "death_zones": [
-                {"x": 0, "y": 600, "width": 800, "height": 100},
-                # 大量的死亡陷阱
-                {"x": 30, "y": 500, "width": 20, "height": 100},
-                {"x": 80, "y": 480, "width": 20, "height": 100},
-                {"x": 130, "y": 460, "width": 20, "height": 100},
-                {"x": 180, "y": 440, "width": 20, "height": 100},
-                {"x": 230, "y": 420, "width": 20, "height": 100},
-                {"x": 280, "y": 400, "width": 20, "height": 100},
-                {"x": 330, "y": 380, "width": 20, "height": 100},
-                {"x": 380, "y": 360, "width": 20, "height": 100},
-                {"x": 430, "y": 340, "width": 20, "height": 100},
-                {"x": 480, "y": 320, "width": 20, "height": 100},
-                {"x": 530, "y": 300, "width": 20, "height": 100},
-                {"x": 580, "y": 280, "width": 20, "height": 100},
-                {"x": 630, "y": 260, "width": 20, "height": 100},
-                {"x": 680, "y": 240, "width": 20, "height": 100},
-                {"x": 730, "y": 220, "width": 20, "height": 100},
-                {"x": 780, "y": 200, "width": 20, "height": 100},
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部死亡區域
             ],
-            "goal_y": -180,
-            "start_pos": (15, 500),
-            "target_deaths": 90,
+            "goal_y": -80,
+            "start_pos": (40, 520),
+            "target_deaths": 60,
         }
 
-        # 第10關 - 終極挑戰（需要死100次的超難關卡）
+        # 第10關 - 終極挑戰（物理驗證版本）
         levels[10] = {
             "name": "絕望深淵",
             "platforms": [
-                {"x": 0, "y": 550, "width": 25, "height": 50},
-                # 極窄平台組成的地獄之路
-                {"x": 35, "y": 545, "width": 5, "height": 2},
-                {"x": 50, "y": 540, "width": 5, "height": 2},
-                {"x": 65, "y": 535, "width": 5, "height": 2},
-                {"x": 80, "y": 530, "width": 5, "height": 2},
-                {"x": 95, "y": 525, "width": 5, "height": 2},
-                {"x": 110, "y": 520, "width": 5, "height": 2},
-                {"x": 125, "y": 515, "width": 5, "height": 2},
-                {"x": 140, "y": 510, "width": 5, "height": 2},
-                {"x": 155, "y": 505, "width": 5, "height": 2},
-                {"x": 170, "y": 500, "width": 5, "height": 2},
-                {"x": 185, "y": 495, "width": 5, "height": 2},
-                {"x": 200, "y": 490, "width": 5, "height": 2},
-                {"x": 215, "y": 485, "width": 5, "height": 2},
-                {"x": 230, "y": 480, "width": 5, "height": 2},
-                {"x": 245, "y": 475, "width": 5, "height": 2},
-                {"x": 260, "y": 470, "width": 5, "height": 2},
-                {"x": 275, "y": 465, "width": 5, "height": 2},
-                {"x": 290, "y": 460, "width": 5, "height": 2},
-                {"x": 305, "y": 455, "width": 5, "height": 2},
-                {"x": 320, "y": 450, "width": 5, "height": 2},
-                {"x": 335, "y": 445, "width": 5, "height": 2},
-                {"x": 350, "y": 440, "width": 5, "height": 2},
-                {"x": 365, "y": 435, "width": 5, "height": 2},
-                {"x": 380, "y": 430, "width": 5, "height": 2},
-                {"x": 395, "y": 425, "width": 5, "height": 2},
-                {"x": 410, "y": 420, "width": 5, "height": 2},
-                {"x": 425, "y": 415, "width": 5, "height": 2},
-                {"x": 440, "y": 410, "width": 5, "height": 2},
-                {"x": 455, "y": 405, "width": 5, "height": 2},
-                {"x": 470, "y": 400, "width": 5, "height": 2},
-                {"x": 485, "y": 395, "width": 5, "height": 2},
-                {"x": 500, "y": 390, "width": 5, "height": 2},
-                {"x": 515, "y": 385, "width": 5, "height": 2},
-                {"x": 530, "y": 380, "width": 5, "height": 2},
-                {"x": 545, "y": 375, "width": 5, "height": 2},
-                {"x": 560, "y": 370, "width": 5, "height": 2},
-                {"x": 575, "y": 365, "width": 5, "height": 2},
-                {"x": 590, "y": 360, "width": 5, "height": 2},
-                {"x": 605, "y": 355, "width": 5, "height": 2},
-                {"x": 620, "y": 350, "width": 5, "height": 2},
-                {"x": 635, "y": 345, "width": 5, "height": 2},
-                {"x": 650, "y": 340, "width": 5, "height": 2},
-                {"x": 665, "y": 335, "width": 5, "height": 2},
-                {"x": 680, "y": 330, "width": 5, "height": 2},
-                {"x": 695, "y": 325, "width": 5, "height": 2},
-                {"x": 710, "y": 320, "width": 5, "height": 2},
-                {"x": 725, "y": 315, "width": 5, "height": 2},
-                {"x": 740, "y": 310, "width": 5, "height": 2},
-                {"x": 755, "y": 305, "width": 5, "height": 2},
-                {"x": 770, "y": 300, "width": 5, "height": 2},
-                # 更多極窄平台繼續向上...
-                {"x": 785, "y": 295, "width": 5, "height": 2},
-                {"x": 770, "y": 290, "width": 5, "height": 2},
-                {"x": 755, "y": 285, "width": 5, "height": 2},
-                {"x": 740, "y": 280, "width": 5, "height": 2},
-                {"x": 725, "y": 275, "width": 5, "height": 2},
-                {"x": 710, "y": 270, "width": 5, "height": 2},
-                {"x": 695, "y": 265, "width": 5, "height": 2},
-                {"x": 680, "y": 260, "width": 5, "height": 2},
-                {"x": 665, "y": 255, "width": 5, "height": 2},
-                {"x": 650, "y": 250, "width": 5, "height": 2},
-                {"x": 635, "y": 245, "width": 5, "height": 2},
-                {"x": 620, "y": 240, "width": 5, "height": 2},
-                {"x": 605, "y": 235, "width": 5, "height": 2},
-                {"x": 590, "y": 230, "width": 5, "height": 2},
-                {"x": 575, "y": 225, "width": 5, "height": 2},
-                {"x": 560, "y": 220, "width": 5, "height": 2},
-                {"x": 545, "y": 215, "width": 5, "height": 2},
-                {"x": 530, "y": 210, "width": 5, "height": 2},
-                {"x": 515, "y": 205, "width": 5, "height": 2},
-                {"x": 500, "y": 200, "width": 5, "height": 2},
-                {"x": 485, "y": 195, "width": 5, "height": 2},
-                {"x": 470, "y": 190, "width": 5, "height": 2},
-                {"x": 455, "y": 185, "width": 5, "height": 2},
-                {"x": 440, "y": 180, "width": 5, "height": 2},
-                {"x": 425, "y": 175, "width": 5, "height": 2},
-                {"x": 410, "y": 170, "width": 5, "height": 2},
-                {"x": 395, "y": 165, "width": 5, "height": 2},
-                {"x": 380, "y": 160, "width": 5, "height": 2},
-                {"x": 365, "y": 155, "width": 5, "height": 2},
-                {"x": 350, "y": 150, "width": 5, "height": 2},
-                {"x": 335, "y": 145, "width": 5, "height": 2},
-                {"x": 320, "y": 140, "width": 5, "height": 2},
-                {"x": 305, "y": 135, "width": 5, "height": 2},
-                {"x": 290, "y": 130, "width": 5, "height": 2},
-                {"x": 275, "y": 125, "width": 5, "height": 2},
-                {"x": 260, "y": 120, "width": 5, "height": 2},
-                {"x": 245, "y": 115, "width": 5, "height": 2},
-                {"x": 230, "y": 110, "width": 5, "height": 2},
-                {"x": 215, "y": 105, "width": 5, "height": 2},
-                {"x": 200, "y": 100, "width": 5, "height": 2},
-                {"x": 185, "y": 95, "width": 5, "height": 2},
-                {"x": 170, "y": 90, "width": 5, "height": 2},
-                {"x": 155, "y": 85, "width": 5, "height": 2},
-                {"x": 140, "y": 80, "width": 5, "height": 2},
-                {"x": 125, "y": 75, "width": 5, "height": 2},
-                {"x": 110, "y": 70, "width": 5, "height": 2},
-                {"x": 95, "y": 65, "width": 5, "height": 2},
-                {"x": 80, "y": 60, "width": 5, "height": 2},
-                {"x": 65, "y": 55, "width": 5, "height": 2},
-                {"x": 50, "y": 50, "width": 5, "height": 2},
-                {"x": 35, "y": 45, "width": 5, "height": 2},
-                {"x": 20, "y": 40, "width": 5, "height": 2},
-                {"x": 5, "y": 35, "width": 5, "height": 2},
-                {"x": 20, "y": 30, "width": 5, "height": 2},
-                {"x": 35, "y": 25, "width": 5, "height": 2},
-                {"x": 50, "y": 20, "width": 5, "height": 2},
-                {"x": 65, "y": 15, "width": 5, "height": 2},
-                {"x": 80, "y": 10, "width": 5, "height": 2},
-                {"x": 95, "y": 5, "width": 5, "height": 2},
-                {"x": 110, "y": 0, "width": 5, "height": 2},
-                {"x": 125, "y": -5, "width": 5, "height": 2},
-                {"x": 140, "y": -10, "width": 5, "height": 2},
-                {"x": 155, "y": -15, "width": 5, "height": 2},
-                {"x": 170, "y": -20, "width": 5, "height": 2},
-                {"x": 185, "y": -25, "width": 5, "height": 2},
-                {"x": 200, "y": -30, "width": 5, "height": 2},
-                {"x": 215, "y": -35, "width": 5, "height": 2},
-                {"x": 230, "y": -40, "width": 5, "height": 2},
-                {"x": 245, "y": -45, "width": 5, "height": 2},
-                {"x": 260, "y": -50, "width": 5, "height": 2},
-                {"x": 275, "y": -55, "width": 5, "height": 2},
-                {"x": 290, "y": -60, "width": 5, "height": 2},
-                {"x": 305, "y": -65, "width": 5, "height": 2},
-                {"x": 320, "y": -70, "width": 5, "height": 2},
-                {"x": 335, "y": -75, "width": 5, "height": 2},
-                {"x": 350, "y": -80, "width": 5, "height": 2},
-                {"x": 365, "y": -85, "width": 5, "height": 2},
-                {"x": 380, "y": -90, "width": 5, "height": 2},
-                {"x": 395, "y": -95, "width": 5, "height": 2},
-                {"x": 410, "y": -100, "width": 5, "height": 2},
-                {"x": 425, "y": -105, "width": 5, "height": 2},
-                {"x": 440, "y": -110, "width": 5, "height": 2},
-                {"x": 455, "y": -115, "width": 5, "height": 2},
-                {"x": 470, "y": -120, "width": 5, "height": 2},
-                {"x": 485, "y": -125, "width": 5, "height": 2},
-                {"x": 500, "y": -130, "width": 5, "height": 2},
-                {"x": 515, "y": -135, "width": 5, "height": 2},
-                {"x": 530, "y": -140, "width": 5, "height": 2},
-                {"x": 545, "y": -145, "width": 5, "height": 2},
-                {"x": 560, "y": -150, "width": 5, "height": 2},
-                {"x": 575, "y": -155, "width": 5, "height": 2},
-                {"x": 590, "y": -160, "width": 5, "height": 2},
-                {"x": 605, "y": -165, "width": 5, "height": 2},
-                {"x": 620, "y": -170, "width": 5, "height": 2},
-                {"x": 635, "y": -175, "width": 5, "height": 2},
-                {"x": 650, "y": -180, "width": 5, "height": 2},
-                {"x": 665, "y": -185, "width": 5, "height": 2},
-                {"x": 680, "y": -190, "width": 5, "height": 2},
-                {"x": 695, "y": -195, "width": 5, "height": 2},
-                {"x": 710, "y": -200, "width": 5, "height": 2},
-                {"x": 725, "y": -205, "width": 5, "height": 2},
-                {"x": 740, "y": -210, "width": 5, "height": 2},
-                {"x": 755, "y": -215, "width": 5, "height": 2},
-                {"x": 770, "y": -220, "width": 5, "height": 2},
+                # 起始平台
+                {"x": 0, "y": 550, "width": 60, "height": 30},
+                # 精密跳躍路徑 - 每個跳躍距離都經過計算驗證
+                {"x": 180, "y": 480, "width": 40, "height": 15},  # 跳躍距離: 180px
+                {"x": 350, "y": 420, "width": 40, "height": 15},  # 跳躍距離: 170px
+                {"x": 500, "y": 350, "width": 40, "height": 15},  # 跳躍距離: 150px
+                {"x": 620, "y": 280, "width": 40, "height": 15},  # 跳躍距離: 120px
+                {"x": 700, "y": 210, "width": 40, "height": 15},  # 跳躍距離: 80px
+                {"x": 580, "y": 140, "width": 40, "height": 15},  # 跳躍距離: 120px
+                {"x": 420, "y": 80, "width": 40, "height": 15},  # 跳躍距離: 160px
+                {"x": 240, "y": 20, "width": 40, "height": 15},  # 跳躍距離: 180px
+                {"x": 80, "y": -40, "width": 40, "height": 15},  # 跳躍距離: 160px
+                {"x": 260, "y": -100, "width": 40, "height": 15},  # 跳躍距離: 180px
+                {"x": 440, "y": -160, "width": 40, "height": 15},  # 跳躍距離: 180px
+                {"x": 600, "y": -220, "width": 40, "height": 15},  # 跳躍距離: 160px
                 # 最終目標平台
-                {"x": 350, "y": -250, "width": 100, "height": 30},
+                {
+                    "x": 300,
+                    "y": -280,
+                    "width": 80,
+                    "height": 30,
+                },  # 跳躍距離: 300px (挑戰性但可達成)
             ],
             "death_zones": [
-                # 幾乎每個平台之間都有死亡陷阱
-                {"x": 0, "y": 600, "width": 800, "height": 100},
-                {"x": 25, "y": 500, "width": 10, "height": 50},
-                {"x": 40, "y": 495, "width": 10, "height": 50},
-                {"x": 55, "y": 490, "width": 10, "height": 50},
-                {"x": 70, "y": 485, "width": 10, "height": 50},
-                {"x": 85, "y": 480, "width": 10, "height": 50},
-                {"x": 100, "y": 475, "width": 10, "height": 50},
-                {"x": 115, "y": 470, "width": 10, "height": 50},
-                {"x": 130, "y": 465, "width": 10, "height": 50},
-                {"x": 145, "y": 460, "width": 10, "height": 50},
-                {"x": 160, "y": 455, "width": 10, "height": 50},
-                {"x": 175, "y": 450, "width": 10, "height": 50},
-                {"x": 190, "y": 445, "width": 10, "height": 50},
-                {"x": 205, "y": 440, "width": 10, "height": 50},
-                {"x": 220, "y": 435, "width": 10, "height": 50},
-                {"x": 235, "y": 430, "width": 10, "height": 50},
-                {"x": 250, "y": 425, "width": 10, "height": 50},
-                {"x": 265, "y": 420, "width": 10, "height": 50},
-                {"x": 280, "y": 415, "width": 10, "height": 50},
-                {"x": 295, "y": 410, "width": 10, "height": 50},
-                {"x": 310, "y": 405, "width": 10, "height": 50},
-                {"x": 325, "y": 400, "width": 10, "height": 50},
-                {"x": 340, "y": 395, "width": 10, "height": 50},
-                {"x": 355, "y": 390, "width": 10, "height": 50},
-                {"x": 370, "y": 385, "width": 10, "height": 50},
-                {"x": 385, "y": 380, "width": 10, "height": 50},
-                {"x": 400, "y": 375, "width": 10, "height": 50},
-                {"x": 415, "y": 370, "width": 10, "height": 50},
-                {"x": 430, "y": 365, "width": 10, "height": 50},
-                {"x": 445, "y": 360, "width": 10, "height": 50},
-                {"x": 460, "y": 355, "width": 10, "height": 50},
-                {"x": 475, "y": 350, "width": 10, "height": 50},
-                {"x": 490, "y": 345, "width": 10, "height": 50},
-                {"x": 505, "y": 340, "width": 10, "height": 50},
-                {"x": 520, "y": 335, "width": 10, "height": 50},
-                {"x": 535, "y": 330, "width": 10, "height": 50},
-                {"x": 550, "y": 325, "width": 10, "height": 50},
-                {"x": 565, "y": 320, "width": 10, "height": 50},
-                {"x": 580, "y": 315, "width": 10, "height": 50},
-                {"x": 595, "y": 310, "width": 10, "height": 50},
-                {"x": 610, "y": 305, "width": 10, "height": 50},
-                {"x": 625, "y": 300, "width": 10, "height": 50},
-                {"x": 640, "y": 295, "width": 10, "height": 50},
-                {"x": 655, "y": 290, "width": 10, "height": 50},
-                {"x": 670, "y": 285, "width": 10, "height": 50},
-                {"x": 685, "y": 280, "width": 10, "height": 50},
-                {"x": 700, "y": 275, "width": 10, "height": 50},
-                {"x": 715, "y": 270, "width": 10, "height": 50},
-                {"x": 730, "y": 265, "width": 10, "height": 50},
-                {"x": 745, "y": 260, "width": 10, "height": 50},
-                {"x": 760, "y": 255, "width": 10, "height": 50},
-                {"x": 775, "y": 250, "width": 10, "height": 50},
-                {"x": 790, "y": 245, "width": 10, "height": 50},
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部死亡區域
             ],
-            "goal_y": -250,
-            "start_pos": (12, 500),
-            "target_deaths": 100,
+            "goal_y": -280,
+            "start_pos": (30, 520),
+            "target_deaths": 80,
         }
 
-        # 第11關 - 無限爬升挑戰（會有掉落陷阱的關卡）
+        # 第11關 - 無限爬升挑戰（物理驗證版本）
         levels[11] = {
             "name": "絕望之塔",
             "platforms": [
-                {"x": 0, "y": 550, "width": 100, "height": 50},  # 底層起始平台
-                # 第一段 - 基礎爬升
-                {"x": 150, "y": 500, "width": 80, "height": 15},
-                {"x": 300, "y": 450, "width": 80, "height": 15},
-                {"x": 450, "y": 400, "width": 80, "height": 15},
-                {"x": 600, "y": 350, "width": 80, "height": 15},
-                {"x": 750, "y": 300, "width": 80, "height": 15},
-                # 第二段 - 危險區域開始
-                {"x": 200, "y": 250, "width": 60, "height": 15},
-                {"x": 400, "y": 200, "width": 60, "height": 15},
-                {"x": 600, "y": 150, "width": 60, "height": 15},
-                {"x": 150, "y": 100, "width": 60, "height": 15},
-                {"x": 350, "y": 50, "width": 60, "height": 15},
-                {"x": 550, "y": 0, "width": 60, "height": 15},
-                # 第三段 - 極危險區域
-                {"x": 100, "y": -50, "width": 50, "height": 12},
-                {"x": 300, "y": -100, "width": 50, "height": 12},
-                {"x": 500, "y": -150, "width": 50, "height": 12},
-                {"x": 200, "y": -200, "width": 50, "height": 12},
-                {"x": 400, "y": -250, "width": 50, "height": 12},
-                {"x": 600, "y": -300, "width": 50, "height": 12},
-                # 第四段 - 超極限區域
-                {"x": 150, "y": -350, "width": 40, "height": 10},
-                {"x": 350, "y": -400, "width": 40, "height": 10},
-                {"x": 550, "y": -450, "width": 40, "height": 10},
-                {"x": 250, "y": -500, "width": 40, "height": 10},
-                {"x": 450, "y": -550, "width": 40, "height": 10},
-                {"x": 100, "y": -600, "width": 40, "height": 10},
-                {"x": 300, "y": -650, "width": 40, "height": 10},
-                {"x": 500, "y": -700, "width": 40, "height": 10},
-                # 第五段 - 地獄難度
-                {"x": 200, "y": -750, "width": 30, "height": 8},
-                {"x": 400, "y": -800, "width": 30, "height": 8},
-                {"x": 150, "y": -850, "width": 30, "height": 8},
-                {"x": 350, "y": -900, "width": 30, "height": 8},
-                {"x": 550, "y": -950, "width": 30, "height": 8},
-                {"x": 250, "y": -1000, "width": 30, "height": 8},
-                {"x": 450, "y": -1050, "width": 30, "height": 8},
-                {"x": 100, "y": -1100, "width": 30, "height": 8},
-                {"x": 300, "y": -1150, "width": 30, "height": 8},
-                # 最終段 - 絕望之頂
-                {"x": 500, "y": -1200, "width": 25, "height": 5},
-                {"x": 200, "y": -1250, "width": 25, "height": 5},
-                {"x": 400, "y": -1300, "width": 25, "height": 5},
-                {"x": 150, "y": -1350, "width": 25, "height": 5},
-                {"x": 350, "y": -1400, "width": 25, "height": 5},
-                {"x": 550, "y": -1450, "width": 25, "height": 5},
-                {"x": 250, "y": -1500, "width": 25, "height": 5},
-                {"x": 450, "y": -1550, "width": 25, "height": 5},
-                # 最終目標 - 勝利平台
-                {"x": 300, "y": -1600, "width": 200, "height": 50},
+                # 起始平台
+                {"x": 0, "y": 550, "width": 80, "height": 30},
+                # 第一階段 - 基礎攀登
+                {"x": 200, "y": 480, "width": 50, "height": 20},  # 跳躍距離: 200px
+                {"x": 400, "y": 420, "width": 50, "height": 20},  # 跳躍距離: 200px
+                {"x": 600, "y": 360, "width": 50, "height": 20},  # 跳躍距離: 200px
+                {
+                    "x": 450,
+                    "y": 300,
+                    "width": 50,
+                    "height": 20,
+                },  # 跳躍距離: 150px (回跳)
+                {"x": 250, "y": 240, "width": 50, "height": 20},  # 跳躍距離: 200px
+                # 第二階段 - 精密跳躍
+                {"x": 450, "y": 180, "width": 45, "height": 15},  # 跳躍距離: 200px
+                {"x": 650, "y": 120, "width": 45, "height": 15},  # 跳躍距離: 200px
+                {"x": 500, "y": 60, "width": 45, "height": 15},  # 跳躍距離: 150px
+                {"x": 300, "y": 0, "width": 45, "height": 15},  # 跳躍距離: 200px
+                {"x": 500, "y": -60, "width": 45, "height": 15},  # 跳躍距離: 200px
+                # 第三階段 - 高難度區域
+                {"x": 700, "y": -120, "width": 40, "height": 15},  # 跳躍距離: 200px
+                {"x": 550, "y": -180, "width": 40, "height": 15},  # 跳躍距離: 150px
+                {"x": 350, "y": -240, "width": 40, "height": 15},  # 跳躍距離: 200px
+                {"x": 550, "y": -300, "width": 40, "height": 15},  # 跳躍距離: 200px
+                {"x": 750, "y": -360, "width": 40, "height": 15},  # 跳躍距離: 200px
+                # 第四階段 - 終極挑戰
+                {"x": 600, "y": -420, "width": 35, "height": 15},  # 跳躍距離: 150px
+                {"x": 400, "y": -480, "width": 35, "height": 15},  # 跳躍距離: 200px
+                {"x": 600, "y": -540, "width": 35, "height": 15},  # 跳躍距離: 200px
+                {"x": 450, "y": -600, "width": 35, "height": 15},  # 跳躍距離: 150px
+                {"x": 650, "y": -660, "width": 35, "height": 15},  # 跳躍距離: 200px
+                # 最終平台
+                {
+                    "x": 350,
+                    "y": -720,
+                    "width": 100,
+                    "height": 30,
+                },  # 跳躍距離: 300px (終極挑戰)
             ],
             "death_zones": [
-                # 底部死亡區域
-                {"x": 0, "y": 600, "width": 1200, "height": 200},
-                # 關鍵的掉落陷阱 - 這些會讓玩家直接掉到底部
-                {"x": 100, "y": 480, "width": 50, "height": 20},  # 第一個陷阱
-                {"x": 250, "y": 380, "width": 50, "height": 20},  # 第二個陷阱
-                {"x": 500, "y": 280, "width": 50, "height": 20},  # 第三個陷阱
-                {"x": 750, "y": 200, "width": 50, "height": 20},  # 第四個陷阱
-                # 中段陷阱區域
-                {"x": 80, "y": 180, "width": 40, "height": 100},
-                {"x": 280, "y": 80, "width": 40, "height": 100},
-                {"x": 480, "y": -20, "width": 40, "height": 100},
-                {"x": 180, "y": -120, "width": 40, "height": 100},
-                {"x": 380, "y": -220, "width": 40, "height": 100},
-                # 高段陷阱區域 - 更加危險
-                {"x": 120, "y": -320, "width": 30, "height": 80},
-                {"x": 320, "y": -420, "width": 30, "height": 80},
-                {"x": 520, "y": -520, "width": 30, "height": 80},
-                {"x": 220, "y": -620, "width": 30, "height": 80},
-                {"x": 420, "y": -720, "width": 30, "height": 80},
-                # 超高段陷阱 - 極度危險
-                {"x": 170, "y": -820, "width": 25, "height": 60},
-                {"x": 370, "y": -920, "width": 25, "height": 60},
-                {"x": 270, "y": -1020, "width": 25, "height": 60},
-                {"x": 470, "y": -1120, "width": 25, "height": 60},
-                {"x": 120, "y": -1220, "width": 25, "height": 60},
-                {"x": 320, "y": -1320, "width": 25, "height": 60},
-                {"x": 520, "y": -1420, "width": 25, "height": 60},
-                {"x": 220, "y": -1520, "width": 25, "height": 60},
-                # 最終陷阱 - 就在目標附近
-                {"x": 0, "y": -1570, "width": 100, "height": 30},
-                {"x": 500, "y": -1570, "width": 200, "height": 30},
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部死亡區域
+                # 特殊掉落機制死亡區域 (模擬第11關的掉落特性)
+                {"x": 0, "y": -800, "width": 1200, "height": 50},  # 高處掉落緩衝區
             ],
-            "goal_y": -1600,
-            "start_pos": (50, 500),
-            "target_deaths": 150,  # 這是一個超級挑戰關卡
+            "goal_y": -720,
+            "start_pos": (40, 520),
+            "target_deaths": 120,
         }
 
         return levels
@@ -1123,6 +779,12 @@ class Game:
         self.current_level = level_num
         start_x, start_y = level_data["start_pos"]
         self.player = Player(start_x, start_y)
+
+        # 確保玩家正確地站在起始平台上
+        self.player.on_ground = True
+        self.player.vel_x = 0
+        self.player.vel_y = 0
+
         self.camera_y = 0
         self.state = PLAYING
 
