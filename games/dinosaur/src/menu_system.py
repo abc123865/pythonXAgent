@@ -8,6 +8,7 @@
 import pygame
 import math
 from config.game_config import Difficulty, DIFFICULTY_SETTINGS, get_color_palette
+from sound_manager import get_sound_manager
 
 
 class MenuSystem:
@@ -29,6 +30,9 @@ class MenuSystem:
         self.selected_difficulty = Difficulty.EASY
         self.selected_index = 0
         self.animation_timer = 0
+
+        # 音效管理器
+        self.sound_manager = get_sound_manager()
 
         # 建立選單選項
         self.menu_options = []
@@ -53,14 +57,20 @@ class MenuSystem:
         """
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
+                self.sound_manager.play_menu_move()
                 self.selected_index = (self.selected_index - 1) % len(self.menu_options)
             elif event.key == pygame.K_DOWN:
+                self.sound_manager.play_menu_move()
                 self.selected_index = (self.selected_index + 1) % len(self.menu_options)
             elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
+                self.sound_manager.play_menu_select()
                 self.selected_difficulty = self.menu_options[self.selected_index][
                     "difficulty"
                 ]
                 return True  # 開始遊戲
+            else:
+                # 其他任何按鍵都播放一般音效
+                self.sound_manager.play_key_press()
         return False
 
     def update(self):
@@ -122,8 +132,11 @@ class MenuSystem:
     def _draw_menu_options(self, screen):
         """繪製選單選項"""
         start_y = int(self.screen_height * 0.25)
-        option_spacing = int(self.screen_height * 0.15)  # 增加間距從 0.12 到 0.15
-        selection_width = min(400, int(self.screen_width * 0.5))
+        option_spacing = int(self.screen_height * 0.15)  # 恢復合理的間距
+        selection_width = min(400, int(self.screen_width * 0.4))
+
+        # 將選單選項移到畫面右側
+        menu_center_x = int(self.screen_width * 0.7)
 
         for i, option in enumerate(self.menu_options):
             y_pos = start_y + i * option_spacing
@@ -132,10 +145,10 @@ class MenuSystem:
             if i == self.selected_index:
                 # 選中背景
                 selection_rect = pygame.Rect(
-                    self.screen_width // 2 - selection_width // 2,
-                    y_pos - int(option_spacing * 0.35),  # 增加背景高度
+                    menu_center_x - selection_width // 2,
+                    y_pos - int(option_spacing * 0.35),
                     selection_width,
-                    int(option_spacing * 0.7),  # 增加背景高度
+                    int(option_spacing * 0.7),
                 )
                 pygame.draw.rect(screen, self.colors["BLUE"], selection_rect)
                 pygame.draw.rect(screen, self.colors["YELLOW"], selection_rect, 3)
@@ -150,9 +163,7 @@ class MenuSystem:
                     option["name"], True, self.colors["GRAY"]
                 )
 
-            option_rect = option_surface.get_rect(
-                center=(self.screen_width // 2, y_pos)
-            )
+            option_rect = option_surface.get_rect(center=(menu_center_x, y_pos))
             screen.blit(option_surface, option_rect)
 
             # 難度描述
@@ -164,13 +175,15 @@ class MenuSystem:
             desc_surface = self.fonts["small"].render(
                 option["description"], True, desc_color
             )
-            desc_y = y_pos + int(option_spacing * 0.3)  # 調整描述位置
-            desc_rect = desc_surface.get_rect(center=(self.screen_width // 2, desc_y))
+            desc_y = y_pos + int(option_spacing * 0.3)
+            desc_rect = desc_surface.get_rect(center=(menu_center_x, desc_y))
             screen.blit(desc_surface, desc_rect)
 
     def _draw_controls(self, screen):
         """繪製控制說明"""
-        control_text = "↑↓ 選擇難度  |  空白鍵/Enter 開始遊戲  |  F11 全螢幕"
+        control_text = (
+            "↑↓ 選擇難度  |  空白鍵/Enter 開始遊戲  |  F1 音效開關  |  F11 全螢幕"
+        )
         control_surface = self.fonts["small"].render(
             control_text, True, self.colors["WHITE"]
         )
@@ -200,8 +213,18 @@ class MenuSystem:
 
         selected_option = self.menu_options[self.selected_index]
         if selected_option["difficulty"] in preview_texts:
-            preview_start_y = int(self.screen_height * 0.7)
-            preview_line_spacing = int(self.screen_height * 0.025)
+            # 難度預覽標題
+            preview_title = "難度特色："
+            title_surface = self.fonts["medium"].render(
+                preview_title, True, self.colors["YELLOW"]
+            )
+            title_x = int(self.screen_width * 0.05)  # 左邊距離邊緣 5%
+            title_y = int(self.screen_height * 0.3)
+            screen.blit(title_surface, (title_x, title_y))
+
+            # 預覽內容
+            preview_start_y = title_y + int(self.screen_height * 0.08)
+            preview_line_spacing = int(self.screen_height * 0.05)  # 調整行間距
 
             for j, preview_text in enumerate(
                 preview_texts[selected_option["difficulty"]]
@@ -209,11 +232,9 @@ class MenuSystem:
                 preview_surface = self.fonts["small"].render(
                     preview_text, True, self.colors["ORANGE"]
                 )
+                preview_x = title_x + int(self.screen_width * 0.02)  # 稍微向右縮進
                 preview_y = preview_start_y + j * preview_line_spacing
-                preview_rect = preview_surface.get_rect(
-                    center=(self.screen_width // 2, preview_y)
-                )
-                screen.blit(preview_surface, preview_rect)
+                screen.blit(preview_surface, (preview_x, preview_y))
 
     def update_screen_size(self, screen_width, screen_height):
         """

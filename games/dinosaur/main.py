@@ -53,6 +53,7 @@ def main():
     print("   • X鍵：衝刺 (有冷卻時間)")
     print("   • Z鍵：護盾 (短時間無敵)")
     print("   • ESC鍵：返回主選單")
+    print("   • F1鍵：切換音效開關")
     print("   • F11鍵：切換全螢幕模式")
     print("   • Alt+F4：退出遊戲")
     print()

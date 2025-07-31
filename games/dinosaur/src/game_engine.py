@@ -25,6 +25,7 @@ from config.game_config import (
 from dinosaur import Dinosaur
 from obstacles import ObstacleManager
 from menu_system import MenuSystem
+from sound_manager import get_sound_manager
 
 
 class Game:
@@ -55,6 +56,9 @@ class Game:
 
         # 字體設定
         self.setup_fonts()
+
+        # 音效系統
+        self.sound_manager = get_sound_manager()
 
         # 主選單系統
         self.menu_system = MenuSystem(
@@ -220,6 +224,9 @@ class Game:
 
         print(f"🚀 遊戲開始！難度等級: {settings['name']}")
 
+        # 播放遊戲開始音效
+        self.sound_manager.play_menu_select()
+
     def return_to_menu(self):
         """返回主選單"""
         self.game_state = GameState.MENU
@@ -234,11 +241,16 @@ class Game:
             # 全域快捷鍵
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F11:
+                    self.sound_manager.play_key_press()
                     self.toggle_fullscreen()
+                elif event.key == pygame.K_F1:
+                    # F1 切換音效開關
+                    self.sound_manager.toggle_sound()
                 elif event.key == pygame.K_F4 and (
                     pygame.key.get_pressed()[pygame.K_LALT]
                     or pygame.key.get_pressed()[pygame.K_RALT]
                 ):
+                    self.sound_manager.play_key_press()
                     return False
 
             # 處理視窗大小改變
@@ -269,15 +281,18 @@ class Game:
                 if self.menu_system.handle_menu_input(event):
                     self.start_game(self.menu_system.selected_difficulty)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.sound_manager.play_key_press()
                     return False
 
             # 處理遊戲中事件
             elif self.game_state == GameState.PLAYING:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
+                        self.sound_manager.play_key_press()
                         self.return_to_menu()
                     elif event.key == pygame.K_SPACE or event.key == pygame.K_UP:
                         if not self.game_over:
+                            self.sound_manager.play_jump()
                             if (
                                 hasattr(self.dinosaur, "is_control_inverted")
                                 and self.dinosaur.is_control_inverted
@@ -286,9 +301,11 @@ class Game:
                             else:
                                 self.dinosaur.jump()
                         else:
+                            self.sound_manager.play_menu_select()
                             self.start_game(self.selected_difficulty)
                     elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         if not self.game_over:
+                            self.sound_manager.play_key_press()
                             if (
                                 hasattr(self.dinosaur, "is_control_inverted")
                                 and self.dinosaur.is_control_inverted
@@ -298,10 +315,18 @@ class Game:
                                 self.dinosaur.duck()
                     elif event.key == pygame.K_x:
                         if not self.game_over:
+                            self.sound_manager.play_dash()
                             self.dinosaur.dash()
                     elif event.key == pygame.K_z:
                         if not self.game_over:
+                            self.sound_manager.play_shield()
                             self.dinosaur.activate_shield()
+                    elif event.key == pygame.K_F11:
+                        # F11 已在全域處理，但我們仍可以添加音效
+                        self.sound_manager.play_key_press()
+                    else:
+                        # 其他任何按鍵都播放一般音效
+                        self.sound_manager.play_key_press()
 
                 elif event.type == pygame.KEYUP:
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
@@ -369,55 +394,57 @@ class Game:
         """更新距離追蹤和分數系統"""
         if self.game_over:
             return
-            
+
         # 累積距離（基於遊戲速度）
         distance_increment = self.game_speed
         self.total_distance += distance_increment
         self.distance_score_accumulator += distance_increment
-        
+
         # 每走過指定距離給予分數
         if self.distance_score_accumulator >= ScoreSystem.DISTANCE_SCORE_INTERVAL:
             # 計算基礎距離分數
             base_score = ScoreSystem.BASE_DISTANCE_SCORE
-            
+
             # 計算速度獎勵倍數
             speed_multiplier = self.calculate_speed_multiplier()
-            
+
             # 計算難度倍數
             difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(
                 self.selected_difficulty, 1.0
             )
-            
+
             # 計算最終分數
             distance_score = int(base_score * speed_multiplier * difficulty_multiplier)
-            
+
             # 添加分數
             self.score += distance_score
-            
+
             # 記錄速度獎勵分數用於顯示
             if speed_multiplier > 1.0:
                 self.last_speed_bonus_score = distance_score - base_score
             else:
                 self.last_speed_bonus_score = 0
-            
+
             # 重置累積器
             self.distance_score_accumulator = 0
-            
+
             # 顯示分數獲得資訊（較低頻率）
             if self.total_distance % (ScoreSystem.DISTANCE_SCORE_INTERVAL * 5) == 0:
-                print(f"📊 距離分數: +{distance_score} (速度倍數: {speed_multiplier:.1f}x, 難度倍數: {difficulty_multiplier:.1f}x)")
+                print(
+                    f"📊 距離分數: +{distance_score} (速度倍數: {speed_multiplier:.1f}x, 難度倍數: {difficulty_multiplier:.1f}x)"
+                )
 
     def calculate_speed_multiplier(self):
         """計算基於速度的分數倍數"""
         if self.game_speed <= ScoreSystem.SPEED_BONUS_THRESHOLD:
             return 1.0
-        
+
         # 計算超過閾值的速度
         excess_speed = self.game_speed - ScoreSystem.SPEED_BONUS_THRESHOLD
-        
+
         # 計算倍數
         multiplier = 1.0 + (excess_speed * ScoreSystem.SPEED_BONUS_MULTIPLIER)
-        
+
         # 限制最大倍數
         return min(multiplier, ScoreSystem.MAX_SPEED_MULTIPLIER)
 
@@ -425,19 +452,23 @@ class Game:
         """計算障礙物分數（包含速度和難度獎勵）"""
         # 計算速度倍數
         speed_multiplier = self.calculate_speed_multiplier()
-        
+
         # 計算難度倍數
         difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(
             self.selected_difficulty, 1.0
         )
-        
+
         # 計算連擊倍數
-        combo_multiplier = 1.0 + (self.combo_count * (ScoreSystem.COMBO_BONUS_MULTIPLIER - 1.0) * 0.1)
+        combo_multiplier = 1.0 + (
+            self.combo_count * (ScoreSystem.COMBO_BONUS_MULTIPLIER - 1.0) * 0.1
+        )
         combo_multiplier = min(combo_multiplier, 3.0)  # 最大3倍連擊獎勵
-        
+
         # 計算最終分數
-        final_score = int(base_score * speed_multiplier * difficulty_multiplier * combo_multiplier)
-        
+        final_score = int(
+            base_score * speed_multiplier * difficulty_multiplier * combo_multiplier
+        )
+
         return final_score
 
     def apply_nightmare_effects(self):
@@ -557,7 +588,9 @@ class Game:
 
         if removed_count > 0:
             # 使用新的分數計算系統
-            obstacle_score = self.calculate_obstacle_score(ScoreSystem.OBSTACLE_BASE_SCORE * removed_count)
+            obstacle_score = self.calculate_obstacle_score(
+                ScoreSystem.OBSTACLE_BASE_SCORE * removed_count
+            )
             self.score += obstacle_score
 
         return False
@@ -641,7 +674,9 @@ class Game:
         # 距離顯示
         distance_km = self.total_distance / 1000
         distance_text = f"距離: {distance_km:.1f}km"
-        distance_surface = self.font_small.render(distance_text, True, self.colors["BLUE"])
+        distance_surface = self.font_small.render(
+            distance_text, True, self.colors["BLUE"]
+        )
         self.screen.blit(distance_surface, (margin, margin + line_height))
 
         # 最高分顯示
@@ -660,7 +695,7 @@ class Game:
         else:
             speed_text = f"速度: {self.game_speed:.1f}x"
             speed_color = self.colors["BLUE"]
-        
+
         speed_surface = self.font_small.render(speed_text, True, speed_color)
         self.screen.blit(speed_surface, (margin, margin + line_height * 3))
 
@@ -671,10 +706,10 @@ class Game:
             Difficulty.HARD: "困難",
             Difficulty.NIGHTMARE: "噩夢",
         }
-        difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(self.selected_difficulty, 1.0)
-        difficulty_text = (
-            f"難度: {difficulty_names.get(self.selected_difficulty, '未知')} ({difficulty_multiplier:.1f}x)"
+        difficulty_multiplier = ScoreSystem.DIFFICULTY_MULTIPLIERS.get(
+            self.selected_difficulty, 1.0
         )
+        difficulty_text = f"難度: {difficulty_names.get(self.selected_difficulty, '未知')} ({difficulty_multiplier:.1f}x)"
         difficulty_surface = self.font_small.render(
             difficulty_text, True, self.colors["PURPLE"]
         )
@@ -876,14 +911,17 @@ class Game:
     def run(self):
         """執行遊戲主迴圈"""
         running = True
-        while running:
-            running = self.handle_events()
-            self.update()
-            self.draw()
-            self.clock.tick(FPS)
-
-        pygame.quit()
-        sys.exit()
+        try:
+            while running:
+                running = self.handle_events()
+                self.update()
+                self.draw()
+                self.clock.tick(FPS)
+        finally:
+            # 清理音效系統
+            self.sound_manager.cleanup()
+            pygame.quit()
+            sys.exit()
 
 
 class Cloud:
