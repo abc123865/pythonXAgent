@@ -106,26 +106,26 @@ FONT_PATH = r"C:\Windows\Fonts\msjh.ttc"  # 微軟正黑體路徑
 class SoundSystem:
     # 音效檔案路徑 (如果存在)
     SOUND_ENABLED = True
-    SOUND_VOLUME = 0.5  # 音量 (0.0 到 1.0)
+    SOUND_VOLUME = 0.7  # 增加音量讓 popcat 音效更明顯
 
-    # 按鍵音效頻率設定 (用於程序生成音效)
-    KEY_PRESS_FREQUENCY = 800  # Hz
-    KEY_PRESS_DURATION = 100  # 毫秒
+    # Popcat 風格音效設定 - 短促清脆的高頻音效
+    KEY_PRESS_FREQUENCY = 1200  # Hz - 提高頻率讓聲音更清脆
+    KEY_PRESS_DURATION = 80  # 毫秒 - 縮短持續時間更像 "pop"
 
-    JUMP_FREQUENCY = 600
-    JUMP_DURATION = 150
+    JUMP_FREQUENCY = 1400  # Hz - 跳躍時更高的音調
+    JUMP_DURATION = 90  # 毫秒
 
-    DASH_FREQUENCY = 1000
-    DASH_DURATION = 120
+    DASH_FREQUENCY = 1600  # Hz - 衝刺時最高的音調
+    DASH_DURATION = 70  # 毫秒 - 最短最快的音效
 
-    SHIELD_FREQUENCY = 1200
-    SHIELD_DURATION = 200
+    SHIELD_FREQUENCY = 1000  # Hz - 護盾音效稍低一些
+    SHIELD_DURATION = 120  # 毫秒
 
-    MENU_MOVE_FREQUENCY = 700
-    MENU_MOVE_DURATION = 80
+    MENU_MOVE_FREQUENCY = 1300  # Hz - 選單移動清脆音效
+    MENU_MOVE_DURATION = 60  # 毫秒 - 非常短促
 
-    MENU_SELECT_FREQUENCY = 900
-    MENU_SELECT_DURATION = 150
+    MENU_SELECT_FREQUENCY = 1500  # Hz - 選擇時最清脆的音效
+    MENU_SELECT_DURATION = 100  # 毫秒
 
 
 # 分數系統設定

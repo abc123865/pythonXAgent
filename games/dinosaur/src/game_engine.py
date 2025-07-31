@@ -95,6 +95,11 @@ class Game:
         self.combo_count = 0
         self.screen_shake = 0
 
+        # 噩夢模式螢幕閃爍效果
+        self.screen_flicker_timer = 0
+        self.screen_flicker_duration = 0
+        self.next_flicker_time = 0
+
         print("🎮 遊戲引擎初始化完成")
 
     def setup_display(self):
@@ -210,6 +215,11 @@ class Game:
         self.combo_count = 0
         self.screen_shake = 0
         self.speed_increase_timer = 0
+
+        # 重置螢幕閃爍效果
+        self.screen_flicker_timer = 0
+        self.screen_flicker_duration = 0
+        self.next_flicker_time = 300  # 5秒 (60FPS * 5)
 
         # 重置距離追蹤
         self.total_distance = 0
@@ -382,6 +392,8 @@ class Game:
                 # 檢查碰撞
                 if self.check_collision():
                     self.game_over = True
+                    # 播放死亡音效
+                    self.sound_manager.play_death_sound()
                     if self.score > self.high_score:
                         self.high_score = self.score
                         print(f"🎉 新紀錄！分數: {self.high_score}")
@@ -476,9 +488,28 @@ class Game:
         if not self.dinosaur:
             return
 
-        # 螢幕閃爍效果
-        if random.randint(1, 300) == 1:
-            self.screen_shake = random.randint(5, 15)
+        # 更新螢幕閃爍計時器
+        self.screen_flicker_timer += 1
+
+        # 檢查是否到達下一次閃爍時間
+        if (
+            self.screen_flicker_timer >= self.next_flicker_time
+            and self.screen_flicker_duration <= 0
+        ):
+            # 開始新的閃爍效果
+            self.screen_flicker_duration = random.randint(30, 90)  # 0.5-1.5秒閃爍
+            self.screen_flicker_timer = 0
+            # 設定下一次閃爍時間 (5秒後)
+            self.next_flicker_time = 300  # 5秒 (60FPS * 5)
+            print("💥 噩夢模式：螢幕閃爍開始！")
+
+        # 減少閃爍持續時間
+        if self.screen_flicker_duration > 0:
+            self.screen_flicker_duration -= 1
+
+        # 原有的螢幕震動效果 (保持較低頻率)
+        if random.randint(1, 500) == 1:
+            self.screen_shake = random.randint(3, 8)
 
         # 重力異常 - 自動觸發，無需跳躍
         if random.randint(1, 400) == 1:
@@ -494,6 +525,61 @@ class Game:
                         2 if not self.dinosaur.is_gravity_reversed else -2
                     )
                 print("⚠️ 重力異常發生！")
+
+    def apply_screen_flicker(self):
+        """應用螢幕閃爍效果"""
+        # 創建閃爍覆蓋層
+        flicker_intensity = random.uniform(0.1, 0.4)  # 閃爍強度
+        flicker_color = random.choice(
+            [
+                (255, 255, 255),  # 白色閃爍
+                (255, 200, 200),  # 淡紅色閃爍
+                (200, 200, 255),  # 淡藍色閃爍
+                (255, 255, 200),  # 淡黃色閃爍
+            ]
+        )
+
+        # 隨機決定閃爍模式
+        flicker_mode = random.randint(1, 3)
+
+        if flicker_mode == 1:
+            # 全螢幕閃爍
+            flicker_surface = pygame.Surface((self.screen_width, self.screen_height))
+            flicker_surface.set_alpha(int(255 * flicker_intensity))
+            flicker_surface.fill(flicker_color)
+            self.screen.blit(flicker_surface, (0, 0))
+
+        elif flicker_mode == 2:
+            # 邊緣閃爍
+            edge_width = random.randint(10, 30)
+            flicker_surface = pygame.Surface((self.screen_width, self.screen_height))
+            flicker_surface.set_alpha(int(255 * flicker_intensity))
+            flicker_surface.fill(flicker_color)
+
+            # 創建中心透明區域
+            center_surface = pygame.Surface(
+                (
+                    self.screen_width - edge_width * 2,
+                    self.screen_height - edge_width * 2,
+                )
+            )
+            center_surface.set_alpha(0)
+            center_surface.fill((0, 0, 0))
+            flicker_surface.blit(center_surface, (edge_width, edge_width))
+
+            self.screen.blit(flicker_surface, (0, 0))
+
+        elif flicker_mode == 3:
+            # 隨機條紋閃爍
+            stripe_count = random.randint(3, 8)
+            stripe_height = self.screen_height // stripe_count
+
+            for i in range(stripe_count):
+                if random.random() < 0.5:  # 50% 機率顯示條紋
+                    stripe_surface = pygame.Surface((self.screen_width, stripe_height))
+                    stripe_surface.set_alpha(int(255 * flicker_intensity))
+                    stripe_surface.fill(flicker_color)
+                    self.screen.blit(stripe_surface, (0, i * stripe_height))
 
     def spawn_cloud(self):
         """生成雲朵"""
@@ -658,6 +744,14 @@ class Game:
             if self.game_over:
                 self.draw_game_over_screen()
 
+            # 噩夢模式螢幕閃爍效果
+            if (
+                self.selected_difficulty == Difficulty.NIGHTMARE
+                and self.screen_flicker_duration > 0
+                and not self.game_over
+            ):
+                self.apply_screen_flicker()
+
         # 更新顯示
         pygame.display.flip()
 
@@ -802,7 +896,10 @@ class Game:
             game_over_text, True, self.colors["RED"]
         )
         game_over_rect = game_over_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 - 120)
+            center=(
+                self.screen_width // 2,
+                self.screen_height // 2 - 240,
+            )  # 原來 -120，現在 -240
         )
         self.screen.blit(game_over_surface, game_over_rect)
 
@@ -812,7 +909,10 @@ class Game:
             final_score_text, True, self.colors["YELLOW"]
         )
         final_score_rect = final_score_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 - 70)
+            center=(
+                self.screen_width // 2,
+                self.screen_height // 2 - 140,
+            )  # 原來 -70，現在 -140
         )
         self.screen.blit(final_score_surface, final_score_rect)
 
@@ -823,7 +923,10 @@ class Game:
             distance_text, True, self.colors["LIGHT_BLUE"]
         )
         distance_rect = distance_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 - 40)
+            center=(
+                self.screen_width // 2,
+                self.screen_height // 2 - 80,
+            )  # 原來 -40，現在 -80
         )
         self.screen.blit(distance_surface, distance_rect)
 
@@ -833,7 +936,10 @@ class Game:
             max_speed_text, True, self.colors["ORANGE"]
         )
         max_speed_rect = max_speed_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 - 10)
+            center=(
+                self.screen_width // 2,
+                self.screen_height // 2 - 20,
+            )  # 原來 -10，現在 -20
         )
         self.screen.blit(max_speed_surface, max_speed_rect)
 
@@ -844,7 +950,10 @@ class Game:
                 new_record_text, True, self.colors["PINK"]
             )
             new_record_rect = new_record_surface.get_rect(
-                center=(self.screen_width // 2, self.screen_height // 2 + 20)
+                center=(
+                    self.screen_width // 2,
+                    self.screen_height // 2 + 40,
+                )  # 原來 +20，現在 +40
             )
             self.screen.blit(new_record_surface, new_record_rect)
 
@@ -854,7 +963,10 @@ class Game:
             restart_text, True, self.colors["WHITE"]
         )
         restart_rect = restart_surface.get_rect(
-            center=(self.screen_width // 2, self.screen_height // 2 + 70)
+            center=(
+                self.screen_width // 2,
+                self.screen_height // 2 + 140,
+            )  # 原來 +70，現在 +140
         )
         self.screen.blit(restart_surface, restart_rect)
 
