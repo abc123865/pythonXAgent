@@ -5,6 +5,7 @@ import os
 
 # 初始化 Pygame
 pygame.init()
+pygame.mixer.init()
 
 # 遊戲設定
 SCREEN_WIDTH = 1200  # 增加視窗寬度
@@ -44,7 +45,7 @@ TOTAL_LEVELS = 12
 
 
 class Player:
-    def __init__(self, x, y):
+    def __init__(self, x, y, game=None):
         self.x = x
         self.y = y
         self.width = 30
@@ -58,6 +59,7 @@ class Player:
         self.start_x = x
         self.start_y = y
         self.death_count = 0
+        self.game = game  # 對遊戲實例的引用，用於播放音效
 
     def reset_position(self):
         """重置玩家位置到關卡起點"""
@@ -256,6 +258,10 @@ class Player:
             jump_force = self.jump_power * 1.2  # 增加跳躍力
             self.vel_x = math.cos(angle_rad) * jump_force
             self.vel_y = math.sin(angle_rad) * -jump_force
+
+            # 播放跳躍音效
+            if self.game:
+                self.game.play_jump_sound()
 
             # 重置跳躍狀態
             self.jump_charging = False
@@ -513,27 +519,27 @@ class LevelManager:
         levels[7] = {
             "name": "簡單練習",
             "platforms": [
-                {"x": 50, "y": 550, "width": 120, "height": 25},   # 起始平台（加大）
+                {"x": 50, "y": 550, "width": 120, "height": 25},  # 起始平台（加大）
                 # 簡化路線：只保留關鍵平台
-                {"x": 250, "y": 480, "width": 90, "height": 20},   # 第一跳（大平台）
-                {"x": 450, "y": 420, "width": 85, "height": 20},   # 第二跳
-                {"x": 200, "y": 360, "width": 85, "height": 20},   # 回跳
-                {"x": 400, "y": 300, "width": 80, "height": 20},   # 前進
-                {"x": 150, "y": 240, "width": 80, "height": 20},   # 左側
-                {"x": 350, "y": 180, "width": 80, "height": 20},   # 中央
-                {"x": 500, "y": 120, "width": 75, "height": 20},   # 右側
+                {"x": 250, "y": 480, "width": 90, "height": 20},  # 第一跳（大平台）
+                {"x": 450, "y": 420, "width": 85, "height": 20},  # 第二跳
+                {"x": 200, "y": 360, "width": 85, "height": 20},  # 回跳
+                {"x": 400, "y": 300, "width": 80, "height": 20},  # 前進
+                {"x": 150, "y": 240, "width": 80, "height": 20},  # 左側
+                {"x": 350, "y": 180, "width": 80, "height": 20},  # 中央
+                {"x": 500, "y": 120, "width": 75, "height": 20},  # 右側
                 # 勝利平台：超大平台
-                {"x": 250, "y": 60, "width": 200, "height": 30},   # 勝利平台（超大）
+                {"x": 250, "y": 60, "width": 200, "height": 30},  # 勝利平台（超大）
             ],
             "death_zones": [
                 {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部深淵
                 # 只保留3個簡單陷阱
-                {"x": 380, "y": 350, "width": 8, "height": 100},   # 中間陷阱1
-                {"x": 280, "y": 250, "width": 8, "height": 100},   # 中間陷阱2
-                {"x": 450, "y": 150, "width": 8, "height": 100},   # 上層陷阱
+                {"x": 380, "y": 350, "width": 8, "height": 100},  # 中間陷阱1
+                {"x": 280, "y": 250, "width": 8, "height": 100},  # 中間陷阱2
+                {"x": 450, "y": 150, "width": 8, "height": 100},  # 上層陷阱
                 # 邊界保護
-                {"x": 0, "y": -50, "width": 8, "height": 400},     # 左邊界
-                {"x": 792, "y": -50, "width": 8, "height": 400},   # 右邊界
+                {"x": 0, "y": -50, "width": 8, "height": 400},  # 左邊界
+                {"x": 792, "y": -50, "width": 8, "height": 400},  # 右邊界
             ],
             "goal_y": 60,
             "start_pos": (100, 530),  # 起始位置調整
@@ -544,23 +550,23 @@ class LevelManager:
         levels[8] = {
             "name": "輕鬆練習",
             "platforms": [
-                {"x": 0, "y": 550, "width": 120, "height": 30},   # 起始平台（超大）
-                {"x": 200, "y": 480, "width": 100, "height": 25}, # 第一跳（超大）
+                {"x": 0, "y": 550, "width": 120, "height": 30},  # 起始平台（超大）
+                {"x": 200, "y": 480, "width": 100, "height": 25},  # 第一跳（超大）
                 {"x": 400, "y": 420, "width": 90, "height": 25},  # 第二跳（大平台）
                 {"x": 250, "y": 360, "width": 90, "height": 25},  # 回跳（大平台）
                 {"x": 450, "y": 300, "width": 85, "height": 25},  # 前進
                 {"x": 200, "y": 240, "width": 85, "height": 25},  # 左側
                 {"x": 400, "y": 180, "width": 80, "height": 25},  # 右側
                 # 勝利平台：超級大平台
-                {"x": 250, "y": 120, "width": 200, "height": 35}, # 勝利平台（超大）
+                {"x": 250, "y": 120, "width": 200, "height": 35},  # 勝利平台（超大）
             ],
             "death_zones": [
-                {"x": 0, "y": 600, "width": 1200, "height": 100}, # 底部深淵
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部深淵
                 # 只保留2個很小的陷阱
-                {"x": 350, "y": 350, "width": 6, "height": 80},   # 小陷阱1
-                {"x": 320, "y": 220, "width": 6, "height": 80},   # 小陷阱2
+                {"x": 350, "y": 350, "width": 6, "height": 80},  # 小陷阱1
+                {"x": 320, "y": 220, "width": 6, "height": 80},  # 小陷阱2
                 # 邊界保護
-                {"x": 0, "y": -50, "width": 8, "height": 300},    # 左邊界
+                {"x": 0, "y": -50, "width": 8, "height": 300},  # 左邊界
                 {"x": 792, "y": -50, "width": 8, "height": 300},  # 右邊界
             ],
             "goal_y": 120,
@@ -880,6 +886,11 @@ class Game:
         # 載入字體
         self.load_fonts()
 
+        # 音效系統
+        self.sound_enabled = True
+        self.sound_volume = 0.7
+        self.load_sounds()
+
     def load_fonts(self):
         """載入字體"""
         font_paths = [
@@ -919,6 +930,131 @@ class Game:
             self.font_medium = pygame.font.Font(None, medium_size)
             self.font_small = pygame.font.Font(None, small_size)
             print("使用系統預設字體")
+
+    def load_sounds(self):
+        """載入音效"""
+        try:
+            # 載入跳躍音效
+            sound_path = os.path.join(os.path.dirname(__file__), "sound", "jump.mp3")
+            if os.path.exists(sound_path):
+                self.jump_sound = pygame.mixer.Sound(sound_path)
+                self.jump_sound.set_volume(self.sound_volume)
+                print(f"成功載入跳躍音效: {sound_path}")
+            else:
+                print(f"找不到音效文件: {sound_path}")
+                self.jump_sound = None
+
+            # 載入通關音效
+            victory_sound_path = os.path.join(
+                os.path.dirname(__file__), "sound", "golfclap.mp3"
+            )
+            if os.path.exists(victory_sound_path):
+                self.victory_sound = pygame.mixer.Sound(victory_sound_path)
+                self.victory_sound.set_volume(self.sound_volume)
+                print(f"成功載入通關音效: {victory_sound_path}")
+            else:
+                print(f"找不到音效文件: {victory_sound_path}")
+                self.victory_sound = None
+
+            # 載入失敗音效
+            gameover_sound_paths = [
+                os.path.join(os.path.dirname(__file__), "sound", "gameover.mp3"),
+                os.path.join(os.path.dirname(__file__), "sound", "gameover.wav"),
+            ]
+
+            self.gameover_sound = None
+            for path in gameover_sound_paths:
+                if os.path.exists(path):
+                    self.gameover_sound = pygame.mixer.Sound(path)
+                    self.gameover_sound.set_volume(self.sound_volume)
+                    print(f"成功載入失敗音效: {path}")
+                    break
+
+            if not self.gameover_sound:
+                print("找不到失敗音效文件 (gameover.mp3 或 gameover.wav)")
+                self.gameover_sound = None
+
+            # 載入 Yee 失敗音效
+            yee_sound_path = os.path.join(os.path.dirname(__file__), "sound", "yee.mp3")
+            if os.path.exists(yee_sound_path):
+                self.yee_sound = pygame.mixer.Sound(yee_sound_path)
+                self.yee_sound.set_volume(self.sound_volume)
+                print(f"成功載入 Yee 失敗音效: {yee_sound_path}")
+            else:
+                print(f"找不到音效文件: {yee_sound_path}")
+                self.yee_sound = None
+        except Exception as e:
+            print(f"載入音效失敗: {e}")
+            self.jump_sound = None
+            self.victory_sound = None
+            self.gameover_sound = None
+            self.yee_sound = None
+
+    def play_jump_sound(self):
+        """播放跳躍音效"""
+        if self.sound_enabled and self.jump_sound:
+            try:
+                self.jump_sound.play()
+            except Exception as e:
+                print(f"播放音效失敗: {e}")
+
+    def play_victory_sound(self):
+        """播放通關音效"""
+        if self.sound_enabled and self.victory_sound:
+            try:
+                self.victory_sound.play()
+            except Exception as e:
+                print(f"播放通關音效失敗: {e}")
+
+    def play_gameover_sound(self):
+        """播放失敗音效"""
+        if self.sound_enabled:
+            # 播放一般失敗音效
+            if self.gameover_sound:
+                try:
+                    self.gameover_sound.play()
+                    print("🔊 播放失敗音效")
+                except Exception as e:
+                    print(f"播放失敗音效失敗: {e}")
+            
+            # 使用 pygame 線程來延遲播放 Yee 音效
+            if self.yee_sound:
+                try:
+                    # 設定定時器，0.5秒後觸發 Yee 音效
+                    pygame.time.set_timer(pygame.USEREVENT + 1, 500)  # 500ms 後播放
+                    print("⏰ 已設定 Yee 音效延遲播放 (0.5秒)")
+                except Exception as e:
+                    print(f"設定 Yee 音效定時器失敗: {e}")
+
+    def play_yee_sound(self):
+        """播放 Yee 音效"""
+        if self.sound_enabled and self.yee_sound:
+            try:
+                self.yee_sound.play()
+                print("🎵 播放 Yee 音效")
+            except Exception as e:
+                print(f"播放 Yee 音效失敗: {e}")
+
+    def toggle_sound(self):
+        """切換音效開關"""
+        self.sound_enabled = not self.sound_enabled
+        if self.sound_enabled:
+            print("音效已開啟")
+        else:
+            print("音效已關閉")
+
+    def set_sound_volume(self, volume):
+        """設置音效音量（0.0-1.0）"""
+        self.sound_volume = max(0.0, min(1.0, volume))
+        if self.jump_sound:
+            self.jump_sound.set_volume(self.sound_volume)
+        if self.victory_sound:
+            self.victory_sound.set_volume(self.sound_volume)
+        if self.gameover_sound:
+            self.gameover_sound.set_volume(self.sound_volume)
+        if self.yee_sound:
+            self.yee_sound.set_volume(self.sound_volume)
+        print(f"音效音量設置為: {self.sound_volume:.1f}")
 
     def load_progress(self):
         """載入遊戲進度"""
@@ -1000,7 +1136,7 @@ class Game:
 
         self.current_level = level_num
         start_x, start_y = level_data["start_pos"]
-        self.player = Player(start_x, start_y)
+        self.player = Player(start_x, start_y, self)  # 傳遞遊戲實例
 
         # 確保玩家正確地站在起始平台上
         self.player.on_ground = True
@@ -1032,6 +1168,9 @@ class Game:
             ):
                 self.level_stats[level_key]["best_deaths"] = deaths
 
+        # 播放通關音效
+        self.play_victory_sound()
+
         # 解鎖下一關
         if self.current_level < TOTAL_LEVELS:
             self.unlocked_levels = max(self.unlocked_levels, self.current_level + 1)
@@ -1041,6 +1180,25 @@ class Game:
 
         self.save_progress()
         self.state = VICTORY
+
+    def game_over(self):
+        """遊戲失敗"""
+        print(f"遊戲失敗！第{self.current_level}關超過目標死亡次數")
+        self.state = GAME_OVER
+        self.play_gameover_sound()
+
+    def restart_current_level(self):
+        """重新開始當前關卡"""
+        if hasattr(self, "current_level"):
+            # 重新開始當前關卡，重置死亡次數
+            self.start_level(self.current_level)
+            # 重置死亡次數統計（給玩家新的機會）
+            if self.player:
+                self.player.death_count = 0
+            print(f"重新開始第{self.current_level}關")
+        else:
+            # 如果沒有當前關卡，返回關卡選擇
+            self.state = LEVEL_SELECT
 
     def trigger_level_completion_celebration(self):
         """觸發關卡完成慶祝"""
@@ -1187,10 +1345,23 @@ class Game:
             if event.type == pygame.QUIT:
                 self.save_progress()
                 self.running = False
+            elif event.type == pygame.USEREVENT + 1:
+                # 定時器事件：播放 Yee 音效
+                self.play_yee_sound()
+                pygame.time.set_timer(pygame.USEREVENT + 1, 0)  # 停止定時器
             elif event.type == pygame.KEYDOWN:
                 # 全域按鍵處理
                 if event.key == pygame.K_F11:
                     self.toggle_fullscreen()
+                elif event.key == pygame.K_m:
+                    # M 鍵切換音效
+                    self.toggle_sound()
+                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                    # 減號鍵降低音量
+                    self.set_sound_volume(self.sound_volume - 0.1)
+                elif event.key == pygame.K_EQUALS or event.key == pygame.K_KP_PLUS:
+                    # 等號/加號鍵提高音量
+                    self.set_sound_volume(self.sound_volume + 0.1)
                 elif event.key == pygame.K_ESCAPE and self.fullscreen:
                     # 在全屏模式下按ESC退出全屏
                     self.toggle_fullscreen()
@@ -1202,11 +1373,20 @@ class Game:
                         self.handle_level_select_events(event)
                     elif self.state == PLAYING:
                         self.handle_playing_events(event)
-                    elif self.state in [VICTORY, GAME_OVER]:
+                    elif self.state == VICTORY:
                         if event.key == pygame.K_RETURN:
                             self.state = LEVEL_SELECT
                         elif event.key == pygame.K_ESCAPE:
                             self.state = MENU
+                    elif self.state == GAME_OVER:
+                        if event.key == pygame.K_RETURN:
+                            # 重新開始當前關卡
+                            self.restart_current_level()
+                        elif event.key == pygame.K_ESCAPE:
+                            self.state = MENU
+                        elif event.key == pygame.K_SPACE:
+                            # 重新開始當前關卡
+                            self.restart_current_level()
             else:
                 if self.state == MENU:
                     self.handle_menu_events(event)
@@ -1214,8 +1394,10 @@ class Game:
                     self.handle_level_select_events(event)
                 elif self.state == PLAYING:
                     self.handle_playing_events(event)
-                elif self.state in [VICTORY, GAME_OVER]:
-                    pass  # 其他事件類型不需要處理
+                elif self.state == VICTORY:
+                    pass  # VICTORY 狀態的其他事件類型不需要處理
+                elif self.state == GAME_OVER:
+                    pass  # GAME_OVER 狀態的其他事件類型不需要處理
 
     def check_goal_completion(self, level_data):
         """檢查玩家是否踩在目標平台上"""
@@ -1278,6 +1460,12 @@ class Game:
             # 添加鼓勵訊息
             self.add_encouragement_message()
             self.save_progress()
+
+            # 檢查是否超過目標死亡次數
+            if self.player.death_count > level_data["target_deaths"]:
+                self.game_over()
+                return
+
         elif result == "fall_trap":
             # 掉落陷阱的特殊處理 - 不重置但記錄
             self.level_stats[str(self.current_level)][
@@ -1286,6 +1474,12 @@ class Game:
             # 添加鼓勵訊息
             self.add_encouragement_message()
             self.save_progress()
+
+            # 檢查是否超過目標死亡次數
+            if self.player.death_count > level_data["target_deaths"]:
+                self.game_over()
+                return
+
         elif result == "infinite_mode":
             # 第12關無限模式觸發
             self.handle_infinite_mode()
@@ -1387,7 +1581,7 @@ class Game:
         screen.blit(progress, progress_rect)
 
         # 操作說明
-        controls = ["↑↓ 選擇", "Enter 確認", "ESC 退出", "F11 切換全屏"]
+        controls = ["↑↓ 選擇", "Enter 確認", "M 切換音效", "ESC 退出", "F11 切換全屏"]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
             screen.blit(text, (50, 500 + i * 25))
@@ -1575,7 +1769,13 @@ class Game:
                     self.screen.blit(warning2, warning2_rect)
 
         # 操作說明
-        controls = ["← → 選擇關卡", "Enter 開始", "ESC 返回", "F11 切換全屏"]
+        controls = [
+            "← → 選擇關卡",
+            "Enter 開始",
+            "M 切換音效",
+            "ESC 返回",
+            "F11 切換全屏",
+        ]
         for i, control in enumerate(controls):
             text = self.font_small.render(control, True, GRAY)
             control_x, control_y = self.scale_pos(50, 550 + i * 20)
@@ -1906,6 +2106,8 @@ class Game:
             "蓄力時按 ← → 選方向",
             "放開 SPACE 跳躍",
             "R 重置位置",
+            "M 切換音效",
+            "+ - 調整音量",
             "ESC 返回選單",
             "F11 切換全屏",
             "撞牆會反彈！",
@@ -1932,6 +2134,12 @@ class Game:
             charge_text = f"蓄力: {self.player.jump_power:.1f}"
             text = self.font_small.render(charge_text, True, YELLOW)
             screen.blit(text, (SCREEN_WIDTH - 150, 60))
+
+        # 音效狀態
+        sound_status = "開啟" if self.sound_enabled else "關閉"
+        sound_text = f"音效: {sound_status} ({int(self.sound_volume * 100)}%)"
+        text = self.font_small.render(sound_text, True, WHITE)
+        screen.blit(text, (SCREEN_WIDTH - 150, 85))
 
     def draw_emotional_messages(self, screen):
         """繪製情緒價值訊息"""
@@ -2134,6 +2342,80 @@ class Game:
         text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 580))
         screen.blit(text, text_rect)
 
+    def draw_game_over(self):
+        """繪製失敗畫面"""
+        if self.fullscreen:
+            # 全屏模式下，先繪製到虛擬畫布
+            virtual_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.draw_game_over_content(virtual_screen)
+            self.scale_and_blit_virtual_screen(virtual_screen)
+        else:
+            # 視窗模式直接繪製
+            self.draw_game_over_content(self.screen)
+
+    def draw_game_over_content(self, screen):
+        """繪製失敗畫面內容"""
+        # 深紅色背景
+        screen.fill((80, 20, 20))
+
+        # 失敗標題
+        title = self.font_large.render("挑戰失敗！", True, RED)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        screen.blit(title, title_rect)
+
+        # 關卡資訊
+        level_data = self.level_manager.get_level(self.current_level)
+        if level_data and self.player:
+            deaths = self.player.death_count
+            target = level_data["target_deaths"]
+
+            # 關卡名稱
+            level_text = f"第{self.current_level}關: {level_data['name']}"
+            text = self.font_medium.render(level_text, True, WHITE)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 280))
+            screen.blit(text, text_rect)
+
+            # 死亡次數
+            deaths_text = f"你的死亡次數: {deaths}"
+            text = self.font_medium.render(deaths_text, True, RED)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 320))
+            screen.blit(text, text_rect)
+
+            # 目標次數
+            target_text = f"目標死亡次數: {target}"
+            text = self.font_medium.render(target_text, True, WHITE)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 360))
+            screen.blit(text, text_rect)
+
+            # 超過提示
+            over_text = f"超過目標 {deaths - target} 次"
+            text = self.font_medium.render(over_text, True, YELLOW)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 400))
+            screen.blit(text, text_rect)
+
+        # 鼓勵文字
+        encouragement = "不要放棄！再試一次！"
+        text = self.font_medium.render(encouragement, True, GREEN)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 460))
+        screen.blit(text, text_rect)
+
+        # 操作說明
+        restart_text = "Enter/Space 重新開始關卡"
+        text = self.font_small.render(restart_text, True, WHITE)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 520))
+        screen.blit(text, text_rect)
+
+        menu_text = "ESC 返回主選單"
+        text = self.font_small.render(menu_text, True, WHITE)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 550))
+        screen.blit(text, text_rect)
+
+        # F11全屏快捷鍵說明
+        fullscreen_text = "F11 切換全屏"
+        text = self.font_small.render(fullscreen_text, True, GRAY)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 580))
+        screen.blit(text, text_rect)
+
     def draw(self):
         """繪製畫面"""
         if self.state == MENU:
@@ -2144,6 +2426,8 @@ class Game:
             self.draw_playing()
         elif self.state == VICTORY:
             self.draw_victory()
+        elif self.state == GAME_OVER:
+            self.draw_game_over()
 
         pygame.display.flip()
 
