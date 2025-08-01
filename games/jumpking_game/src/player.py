@@ -6,7 +6,7 @@ Jump King 玩家類別
 import pygame
 import math
 import random
-from games.jumpking_game.src.game_config import *
+from game_config import *
 
 
 class Player:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#! python3
 """
 Jump King 遊戲主程式
 重新建構版本 - 模組化設計

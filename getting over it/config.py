@@ -1,0 +1,22 @@
+# Getting Over It - 遊戲配置
+
+# 視窗設定
+SCREEN_WIDTH = 1200
+SCREEN_HEIGHT = 800
+FPS = 60
+
+# 物理設定
+GRAVITY = 0.5
+AIR_RESISTANCE = 0.99
+FRICTION = 0.95
+
+# 玩家設定
+PLAYER_SIZE = 30
+HAMMER_LENGTH = 80
+
+# 顏色設定
+BACKGROUND_COLOR = (135, 206, 235)  # 天空藍
+PLATFORM_COLOR = (139, 69, 19)  # 棕色
+OBSTACLE_COLOR = (128, 128, 128)  # 灰色
+PLAYER_COLOR = (255, 165, 0)  # 橙色
+HAMMER_COLOR = (139, 69, 19)  # 棕色

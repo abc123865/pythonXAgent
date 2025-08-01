@@ -5,7 +5,7 @@ Jump King 渲染器
 """
 import pygame
 import time
-from games.jumpking_game.src.game_config import *
+from game_config import *
 
 
 class Renderer:
