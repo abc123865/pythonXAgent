@@ -32,12 +32,12 @@
       "best_deaths": 7
     },
     "7": {
-      "deaths": 1,
+      "deaths": 3,
       "completed": true,
       "best_deaths": 1
     },
     "8": {
-      "deaths": 7,
+      "deaths": 2,
       "completed": false,
       "best_deaths": null
     }

@@ -60,7 +60,7 @@ class Player:
         self.start_y = y
         self.death_count = 0
         self.game = game  # 對遊戲實例的引用，用於播放音效
-        
+
         # 跳躍力量循環系統
         self.jump_power_paused = False  # 是否處於暫停狀態
         self.jump_power_pause_timer = 0  # 暫停計時器
@@ -76,7 +76,7 @@ class Player:
         self.jump_charging = False
         self.jump_power = 0
         self.death_count += 1
-        
+
         # 重置跳躍力量循環系統
         self.jump_power_paused = False
         self.jump_power_pause_timer = 0
@@ -340,12 +340,16 @@ class Player:
 
             # 背景
             pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
-            
+
             if self.jump_power_paused:
                 # 暫停狀態：顯示滿條並閃爍
                 flash_intensity = int(self.jump_power_pause_timer / 3) % 2
-                bar_color = (255, 255, 0) if flash_intensity else (255, 100, 0)  # 黃色/橙色閃爍
-                pygame.draw.rect(screen, bar_color, (bar_x, bar_y, bar_width, bar_height))
+                bar_color = (
+                    (255, 255, 0) if flash_intensity else (255, 100, 0)
+                )  # 黃色/橙色閃爍
+                pygame.draw.rect(
+                    screen, bar_color, (bar_x, bar_y, bar_width, bar_height)
+                )
             else:
                 # 正常蓄力狀態
                 charge_ratio = (self.jump_power - MIN_JUMP_POWER) / (
@@ -1028,12 +1032,51 @@ class Game:
             else:
                 print(f"找不到音效文件: {yee_sound_path}")
                 self.yee_sound = None
+
+            # 載入背景音樂
+            self.load_background_music()
+
         except Exception as e:
             print(f"載入音效失敗: {e}")
             self.jump_sound = None
             self.victory_sound = None
             self.gameover_sound = None
             self.yee_sound = None
+
+    def load_background_music(self):
+        """載入背景音樂"""
+        try:
+            # 支援多種音樂格式
+            music_paths = [
+                os.path.join(os.path.dirname(__file__), "sound", "background.mp3"),
+                os.path.join(os.path.dirname(__file__), "sound", "background.wav"),
+                os.path.join(os.path.dirname(__file__), "sound", "background.ogg"),
+                os.path.join(os.path.dirname(__file__), "sound", "bgm.mp3"),
+                os.path.join(os.path.dirname(__file__), "sound", "bgm.wav"),
+                os.path.join(os.path.dirname(__file__), "sound", "music.mp3"),
+            ]
+
+            self.background_music_loaded = False
+            for music_path in music_paths:
+                if os.path.exists(music_path):
+                    try:
+                        pygame.mixer.music.load(music_path)
+                        self.background_music_loaded = True
+                        self.background_music_path = music_path
+                        print(f"成功載入背景音樂: {music_path}")
+                        break
+                    except Exception as e:
+                        print(f"載入背景音樂失敗 {music_path}: {e}")
+                        continue
+
+            if not self.background_music_loaded:
+                print(
+                    "找不到背景音樂文件 (支援格式: background.mp3/wav/ogg, bgm.mp3/wav, music.mp3)"
+                )
+
+        except Exception as e:
+            print(f"背景音樂系統初始化失敗: {e}")
+            self.background_music_loaded = False
 
     def play_jump_sound(self):
         """播放跳躍音效"""
@@ -1061,7 +1104,7 @@ class Game:
                     print("🔊 播放失敗音效")
                 except Exception as e:
                     print(f"播放失敗音效失敗: {e}")
-            
+
             # 使用 pygame 線程來延遲播放 Yee 音效
             if self.yee_sound:
                 try:
@@ -1080,13 +1123,65 @@ class Game:
             except Exception as e:
                 print(f"播放 Yee 音效失敗: {e}")
 
+    def start_background_music(self):
+        """開始播放背景音樂"""
+        if self.sound_enabled and self.background_music_loaded:
+            try:
+                pygame.mixer.music.play(-1)  # -1 表示無限循環
+                pygame.mixer.music.set_volume(
+                    self.sound_volume * 0.6
+                )  # 背景音樂音量稍低
+                print("🎵 開始播放背景音樂")
+            except Exception as e:
+                print(f"播放背景音樂失敗: {e}")
+
+    def stop_background_music(self):
+        """停止背景音樂"""
+        try:
+            pygame.mixer.music.stop()
+            print("⏹️  停止背景音樂")
+        except Exception as e:
+            print(f"停止背景音樂失敗: {e}")
+
+    def pause_background_music(self):
+        """暫停背景音樂"""
+        try:
+            pygame.mixer.music.pause()
+            print("⏸️  暫停背景音樂")
+        except Exception as e:
+            print(f"暫停背景音樂失敗: {e}")
+
+    def resume_background_music(self):
+        """恢復背景音樂"""
+        try:
+            pygame.mixer.music.unpause()
+            print("▶️  恢復背景音樂")
+        except Exception as e:
+            print(f"恢復背景音樂失敗: {e}")
+
+    def set_background_music_volume(self, volume):
+        """設置背景音樂音量"""
+        try:
+            pygame.mixer.music.set_volume(max(0.0, min(1.0, volume)))
+        except Exception as e:
+            print(f"設置背景音樂音量失敗: {e}")
+
     def toggle_sound(self):
         """切換音效開關"""
         self.sound_enabled = not self.sound_enabled
         if self.sound_enabled:
             print("音效已開啟")
+            # 如果在遊戲中且有背景音樂，重新開始播放
+            if (
+                hasattr(self, "state")
+                and self.state == 2
+                and self.background_music_loaded
+            ):  # 2 = PLAYING
+                self.start_background_music()
         else:
             print("音效已關閉")
+            # 停止背景音樂
+            self.stop_background_music()
 
     def set_sound_volume(self, volume):
         """設置音效音量（0.0-1.0）"""
@@ -1099,6 +1194,9 @@ class Game:
             self.gameover_sound.set_volume(self.sound_volume)
         if self.yee_sound:
             self.yee_sound.set_volume(self.sound_volume)
+        # 更新背景音樂音量
+        if self.background_music_loaded:
+            self.set_background_music_volume(self.sound_volume * 0.6)
         print(f"音效音量設置為: {self.sound_volume:.1f}")
 
     def load_progress(self):
@@ -1191,6 +1289,9 @@ class Game:
         self.camera_y = 0
         self.state = PLAYING
 
+        # 開始播放背景音樂
+        self.start_background_music()
+
         # 初始化關卡統計
         if str(level_num) not in self.level_stats:
             self.level_stats[str(level_num)] = {
@@ -1230,6 +1331,7 @@ class Game:
         """遊戲失敗"""
         print(f"遊戲失敗！第{self.current_level}關超過目標死亡次數")
         self.state = GAME_OVER
+        self.stop_background_music()  # 停止背景音樂
         self.play_gameover_sound()
 
     def restart_current_level(self):
