@@ -40,7 +40,7 @@ GAME_OVER = 3
 VICTORY = 4
 
 # 關卡設定
-TOTAL_LEVELS = 11
+TOTAL_LEVELS = 12
 
 
 class Player:
@@ -116,6 +116,14 @@ class Player:
                             self.vel_y = 0
                             self.reset_position()
                             return "fall_trap"
+
+        # 特殊處理第12關的無限生成機制
+        if level_num == 12:
+            # 當玩家達到很高的高度時，動態生成新的平台
+            current_height = -self.y  # 轉換為正數高度
+            if current_height > 2000:  # 超過2000像素高度
+                # 觸發無限模式
+                return "infinite_mode"
 
         # 檢查死亡區域
         if death_zones:
@@ -301,6 +309,64 @@ class LevelManager:
     def __init__(self):
         self.levels = self.create_all_levels()
 
+    def generate_infinite_platforms_segment(self, base_y, segment_num):
+        """為無限關卡生成一個階段的平台"""
+        import random
+
+        random.seed(segment_num)  # 使用段數作為種子，確保結果可重現
+
+        platforms = []
+        platform_spacing = 200  # 每個段落的高度間隔
+
+        # 根據段數調整難度
+        difficulty = min(segment_num, 10)  # 最大難度為10
+        platform_size = max(8, 20 - difficulty)  # 平台大小隨難度減小
+        platform_height = max(3, 8 - difficulty // 2)  # 平台高度隨難度減小
+
+        # 每個段落生成6-8個平台
+        num_platforms = random.randint(6, 8)
+
+        for i in range(num_platforms):
+            # 計算平台位置
+            x = random.randint(50, 750)
+            y = base_y + i * (platform_spacing // num_platforms)
+
+            # 添加一些隨機偏移讓路線更有趣
+            x_offset = random.randint(-50, 50)
+            y_offset = random.randint(-20, 20)
+
+            x = max(50, min(750, x + x_offset))
+            y = y + y_offset
+
+            platforms.append(
+                {"x": x, "y": y, "width": platform_size, "height": platform_height}
+            )
+
+        return platforms
+
+    def generate_infinite_death_zones_segment(self, base_y, segment_num):
+        """為無限關卡生成一個階段的死亡區域"""
+        import random
+
+        random.seed(segment_num + 1000)  # 不同的種子避免和平台重疊
+
+        death_zones = []
+
+        # 根據段數調整陷阱密度
+        difficulty = min(segment_num, 10)
+        num_traps = difficulty + 2  # 陷阱數量隨難度增加
+
+        for i in range(num_traps):
+            # 隨機放置陷阱
+            x = random.randint(100, 700)
+            y = base_y + random.randint(-100, 100)
+            width = random.randint(5, 15)
+            height = random.randint(50, 150)
+
+            death_zones.append({"x": x, "y": y, "width": width, "height": height})
+
+        return death_zones
+
     def create_all_levels(self):
         """創建所有關卡的平台和死亡區域"""
         levels = {}
@@ -443,32 +509,197 @@ class LevelManager:
             "target_deaths": 35,  # 稍微降低死亡目標，提高可玩性
         }
 
-        # 第7關 - 簡潔挑戰（根據截圖設計）
+        # 第7關 - 精準大師（高難度精密跳躍挑戰）
         levels[7] = {
-            "name": "簡潔挑戰",
+            "name": "精準大師",
             "platforms": [
-                {"x": 0, "y": 550, "width": 80, "height": 20},  # 起始平台（左下角）
-                {"x": 180, "y": 450, "width": 40, "height": 15},  # 第一個跳台
-                {"x": 320, "y": 350, "width": 35, "height": 15},  # 中間平台
-                {"x": 480, "y": 250, "width": 35, "height": 15},  # 上升平台
-                {"x": 620, "y": 150, "width": 35, "height": 15},  # 最後跳台
+                {"x": 0, "y": 550, "width": 70, "height": 20},  # 起始平台（稍微加寬）
+                # 第一階段 - Z字形精密路線
                 {
-                    "x": 480,
-                    "y": 80,
-                    "width": 120,
+                    "x": 200,
+                    "y": 490,
+                    "width": 30,
+                    "height": 12,
+                },  # 跳躍距離: 208px（加寬5px）
+                {
+                    "x": 380,
+                    "y": 440,
+                    "width": 28,
+                    "height": 10,
+                },  # 跳躍距離: 188px（加寬6px）
+                {
+                    "x": 150,
+                    "y": 390,
+                    "width": 26,
+                    "height": 10,
+                },  # 回跳距離: 238px（加寬6px）
+                {
+                    "x": 320,
+                    "y": 340,
+                    "width": 28,
+                    "height": 10,
+                },  # 跳躍距離: 178px（加寬6px）
+                {
+                    "x": 500,
+                    "y": 290,
+                    "width": 26,
+                    "height": 10,
+                },  # 跳躍距離: 188px（加寬6px）
+                # 第二階段 - 窄平台挑戰
+                {
+                    "x": 680,
+                    "y": 240,
+                    "width": 24,
+                    "height": 8,
+                },  # 跳躍距離: 188px（加寬6px）
+                {
+                    "x": 520,
+                    "y": 190,
+                    "width": 24,
+                    "height": 8,
+                },  # 回跳距離: 168px（加寬6px）
+                {
+                    "x": 300,
+                    "y": 140,
+                    "width": 22,
+                    "height": 8,
+                },  # 跳躍距離: 228px（加寬6px）
+                {
+                    "x": 120,
+                    "y": 90,
+                    "width": 22,
+                    "height": 8,
+                },  # 跳躍距離: 188px（加寬6px）
+                # 第三階段 - 超精密跳躍
+                {
+                    "x": 350,
+                    "y": 40,
+                    "width": 20,
+                    "height": 6,
+                },  # 跳躍距離: 238px（加寬6px）
+                {
+                    "x": 550,
+                    "y": -10,
+                    "width": 20,
+                    "height": 6,
+                },  # 跳躍距離: 208px（加寬6px）
+                {
+                    "x": 700,
+                    "y": -60,
+                    "width": 20,
+                    "height": 6,
+                },  # 跳躍距離: 158px（加寬6px）
+                {
+                    "x": 500,
+                    "y": -110,
+                    "width": 18,
+                    "height": 6,
+                },  # 回跳距離: 208px（加寬6px）
+                {
+                    "x": 250,
+                    "y": -160,
+                    "width": 18,
+                    "height": 6,
+                },  # 跳躍距離: 258px（加寬6px）
+                # 最終挑戰 - 精準但不極限
+                {
+                    "x": 450,
+                    "y": -210,
+                    "width": 16,
+                    "height": 5,
+                },  # 跳躍距離: 208px（加寬6px）
+                {
+                    "x": 650,
+                    "y": -260,
+                    "width": 16,
+                    "height": 5,
+                },  # 跳躍距離: 208px（加寬6px）
+                {
+                    "x": 450,
+                    "y": -310,
+                    "width": 16,
+                    "height": 5,
+                },  # 回跳距離: 208px（加寬6px）
+                # 最終目標平台
+                {
+                    "x": 300,
+                    "y": -360,
+                    "width": 90,
                     "height": 20,
-                },  # 目標平台（黃色，右上角）
+                },  # 跳躍距離: 158px（加寬10px）
             ],
             "death_zones": [
                 {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部深淵
-                # 左側岩漿牆
-                {"x": 80, "y": 400, "width": 20, "height": 120},  # 左側岩漿陷阱
-                # 右側岩漿牆
-                {"x": 600, "y": 200, "width": 20, "height": 120},  # 右側岩漿陷阱
+                # 第一階段陷阱 - 減少一些陷阱寬度
+                {
+                    "x": 100,
+                    "y": 460,
+                    "width": 10,
+                    "height": 180,
+                },  # 阻斷第一跳的失誤（減少2px）
+                {
+                    "x": 280,
+                    "y": 410,
+                    "width": 10,
+                    "height": 180,
+                },  # 第二跳陷阱（減少2px）
+                {"x": 250, "y": 360, "width": 10, "height": 180},  # 回跳陷阱（減少2px）
+                {"x": 420, "y": 310, "width": 10, "height": 180},  # 前進陷阱（減少2px）
+                {"x": 590, "y": 260, "width": 10, "height": 180},  # 大跳陷阱（減少2px）
+                # 第二階段陷阱 - 稍微減少威脅
+                {"x": 600, "y": 210, "width": 8, "height": 150},  # 邊界陷阱（減少2px）
+                {"x": 420, "y": 160, "width": 8, "height": 150},  # 中間陷阱（減少2px）
+                {"x": 220, "y": 110, "width": 8, "height": 150},  # 回程陷阱（減少2px）
+                {"x": 50, "y": 60, "width": 8, "height": 150},  # 邊界威脅（減少2px）
+                # 第三階段陷阱 - 適度降低威脅
+                {
+                    "x": 250,
+                    "y": 10,
+                    "width": 7,
+                    "height": 200,
+                },  # 超高空陷阱1（減少2px）
+                {
+                    "x": 450,
+                    "y": -40,
+                    "width": 7,
+                    "height": 200,
+                },  # 超高空陷阱2（減少2px）
+                {
+                    "x": 620,
+                    "y": -90,
+                    "width": 7,
+                    "height": 200,
+                },  # 超高空陷阱3（減少2px）
+                {
+                    "x": 375,
+                    "y": -140,
+                    "width": 7,
+                    "height": 200,
+                },  # 回程超高空陷阱（減少2px）
+                {"x": 150, "y": -190, "width": 7, "height": 200},  # 極限陷阱（減少2px）
+                # 最終階段陷阱 - 稍微寬鬆
+                {
+                    "x": 350,
+                    "y": -240,
+                    "width": 6,
+                    "height": 250,
+                },  # 終極陷阱1（減少2px）
+                {
+                    "x": 550,
+                    "y": -290,
+                    "width": 6,
+                    "height": 250,
+                },  # 終極陷阱2（減少2px）
+                {"x": 350, "y": -340, "width": 6, "height": 250},  # 最終陷阱（減少2px）
+                # 邊界死亡牆
+                {"x": 0, "y": -100, "width": 15, "height": 500},  # 左邊界
+                {"x": 785, "y": -100, "width": 15, "height": 500},  # 右邊界
+                # 頂部限制
+                {"x": 0, "y": -400, "width": 1200, "height": 30},  # 頂部死亡區
             ],
-            "goal_y": 80,
-            "start_pos": (40, 530),
-            "target_deaths": 25,  # 簡化設計，降低死亡目標
+            "goal_y": -360,
+            "start_pos": (35, 530),  # 調整起始位置
+            "target_deaths": 38,  # 降低死亡目標（從45降到38）
         }
 
         # 第8關 - 高手挑戰（物理驗證安全版本）
@@ -712,6 +943,50 @@ class LevelManager:
             "target_deaths": 200,  # 超級高死亡目標，真正的終極挑戰
         }
 
+        # 第12關 - 無限之塔（真正的無限高度挑戰）
+        levels[12] = {
+            "name": "無限之塔",
+            "platforms": [
+                # 起始平台
+                {"x": 0, "y": 550, "width": 60, "height": 20},
+                # 第一段階梯 - 每隔200高度生成一組平台
+                *self.generate_infinite_platforms_segment(-200, 1),
+                *self.generate_infinite_platforms_segment(-400, 2),
+                *self.generate_infinite_platforms_segment(-600, 3),
+                *self.generate_infinite_platforms_segment(-800, 4),
+                *self.generate_infinite_platforms_segment(-1000, 5),
+                *self.generate_infinite_platforms_segment(-1200, 6),
+                *self.generate_infinite_platforms_segment(-1400, 7),
+                *self.generate_infinite_platforms_segment(-1600, 8),
+                *self.generate_infinite_platforms_segment(-1800, 9),
+                *self.generate_infinite_platforms_segment(-2000, 10),
+                # 理論上可以繼續無限延伸...
+                # 終極目標平台（如果真的有人能到達）
+                {"x": 350, "y": -2200, "width": 150, "height": 40},  # 神級目標
+            ],
+            "death_zones": [
+                {"x": 0, "y": 600, "width": 1200, "height": 100},  # 底部深淵
+                # 為每個階段生成相應的陷阱
+                *self.generate_infinite_death_zones_segment(-200, 1),
+                *self.generate_infinite_death_zones_segment(-400, 2),
+                *self.generate_infinite_death_zones_segment(-600, 3),
+                *self.generate_infinite_death_zones_segment(-800, 4),
+                *self.generate_infinite_death_zones_segment(-1000, 5),
+                *self.generate_infinite_death_zones_segment(-1200, 6),
+                *self.generate_infinite_death_zones_segment(-1400, 7),
+                *self.generate_infinite_death_zones_segment(-1600, 8),
+                *self.generate_infinite_death_zones_segment(-1800, 9),
+                *self.generate_infinite_death_zones_segment(-2000, 10),
+                # 邊界死亡牆
+                {"x": 0, "y": -1500, "width": 15, "height": 2000},  # 左邊界
+                {"x": 785, "y": -1500, "width": 15, "height": 2000},  # 右邊界
+            ],
+            "goal_y": -2200,  # 超高目標，但理論上可以更高
+            "start_pos": (30, 530),
+            "target_deaths": 500,  # 史詩級死亡目標
+            "infinite": True,  # 標記為無限關卡
+        }
+
         return levels
 
     def get_level(self, level_num):
@@ -759,6 +1034,14 @@ class Game:
         # 選單選項
         self.menu_selection = 0
         self.level_select_selection = 1
+
+        # 情緒價值系統
+        self.encouragement_messages = []
+        self.encouragement_timer = 0
+        self.congratulation_messages = []
+        self.congratulation_timer = 0
+        self.mega_celebration = False
+        self.mega_celebration_timer = 0
 
         # 載入字體
         self.load_fonts()
@@ -919,8 +1202,91 @@ class Game:
         if self.current_level < TOTAL_LEVELS:
             self.unlocked_levels = max(self.unlocked_levels, self.current_level + 1)
 
+        # 觸發情緒價值系統
+        self.trigger_level_completion_celebration()
+
         self.save_progress()
         self.state = VICTORY
+
+    def trigger_level_completion_celebration(self):
+        """觸發關卡完成慶祝"""
+        level_data = self.level_manager.get_level(self.current_level)
+        deaths = self.player.death_count
+        target = level_data["target_deaths"]
+
+        # 普通完成關卡的情緒價值
+        if deaths <= target:
+            # 在目標內完成
+            self.congratulation_messages = [
+                "🎉 太棒了！你在目標內完成了！",
+                "💪 你的技巧正在進步！",
+                "⭐ 完美的控制力！",
+                "🔥 繼續保持這個節奏！",
+            ]
+        else:
+            # 超過目標但仍完成
+            self.congratulation_messages = [
+                "🎊 恭喜完成關卡！",
+                "💯 永不放棄的精神！",
+                "🌟 堅持就是勝利！",
+                "👏 你做到了！",
+            ]
+
+        # 特殊關卡的額外慶祝
+        if self.current_level == 11:
+            # 第11關天堂之塔
+            self.congratulation_messages.extend(
+                ["👑 天堂之塔征服者！", "🚀 你已超越了極限！", "🏆 真正的跳躍大師！"]
+            )
+        elif self.current_level == 12:
+            # 第12關無限之塔 - 超大情緒價值
+            self.mega_celebration = True
+            self.mega_celebration_timer = 600  # 10秒的超級慶祝
+            self.congratulation_messages = [
+                "🎆🎆🎆 史詩級成就解鎖！🎆🎆🎆",
+                "👑👑👑 無限之塔征服者！👑👑👑",
+                "🏆🏆🏆 跳躍之神誕生！🏆🏆🏆",
+                "🌟🌟🌟 傳說級玩家！🌟🌟🌟",
+                "🚀🚀🚀 你打破了物理定律！🚀🚀🚀",
+                "💎💎💎 絕對的完美！💎💎💎",
+                "🔥🔥🔥 燃燒吧！跳躍魂！🔥🔥🔥",
+            ]
+
+        # 所有關卡完成的終極慶祝
+        if self.current_level == TOTAL_LEVELS:
+            self.mega_celebration = True
+            self.mega_celebration_timer = 900  # 15秒的終極慶祝
+            self.congratulation_messages.extend(
+                [
+                    "🎖️🎖️🎖️ 全關卡制霸！🎖️🎖️🎖️",
+                    "👑 你就是跳躍之王！👑",
+                    "🌈 傳奇之路完成！🌈",
+                    "💫 你創造了奇蹟！💫",
+                ]
+            )
+
+        self.congratulation_timer = 300  # 5秒顯示
+
+    def add_encouragement_message(self):
+        """添加鼓勵訊息（死亡時）"""
+        encouragement_pool = [
+            "💪 不要放棄！你可以的！",
+            "🌟 每次失敗都是學習！",
+            "🔥 堅持下去，勝利在前方！",
+            "⚡ 再試一次，你會更強！",
+            "💯 失敗是成功之母！",
+            "🚀 向著目標前進！",
+            "⭐ 相信自己的能力！",
+            "🎯 專注，你能做到的！",
+            "💎 每一次跳躍都在進步！",
+            "🏆 冠軍從不輕易放棄！",
+        ]
+
+        import random
+
+        message = random.choice(encouragement_pool)
+        self.encouragement_messages.append(message)
+        self.encouragement_timer = 180  # 3秒顯示
 
     def handle_menu_events(self, event):
         """處理主選單事件"""
@@ -1075,13 +1441,20 @@ class Game:
             self.level_stats[str(self.current_level)][
                 "deaths"
             ] = self.player.death_count
+            # 添加鼓勵訊息
+            self.add_encouragement_message()
             self.save_progress()
         elif result == "fall_trap":
             # 掉落陷阱的特殊處理 - 不重置但記錄
             self.level_stats[str(self.current_level)][
                 "deaths"
             ] = self.player.death_count
+            # 添加鼓勵訊息
+            self.add_encouragement_message()
             self.save_progress()
+        elif result == "infinite_mode":
+            # 第12關無限模式觸發
+            self.handle_infinite_mode()
 
         # 更新相機
         self.update_camera()
@@ -1089,6 +1462,29 @@ class Game:
         # 檢查是否完成關卡（必須踩在目標平台上）
         if self.check_goal_completion(level_data):
             self.complete_level()
+
+    def handle_infinite_mode(self):
+        """處理第12關的無限模式"""
+        if self.current_level != 12:
+            return
+
+        current_height = -self.player.y
+        # 每達到新的500像素高度里程碑，添加鼓勵訊息
+        milestone = int(current_height // 500) * 500
+
+        if milestone > 2000 and milestone % 500 == 0:
+            infinite_messages = [
+                f"🚀 突破{milestone}米高度！",
+                "🌟 你正在創造奇蹟！",
+                "💫 繼續攀登，勇士！",
+                "⚡ 無限的力量！",
+                "🔥 燃燒吧！跳躍魂！",
+            ]
+            import random
+
+            message = random.choice(infinite_messages)
+            self.encouragement_messages.append(message)
+            self.encouragement_timer = 240  # 4秒顯示
 
     def update_camera(self):
         """更新相機位置"""
@@ -1100,6 +1496,22 @@ class Game:
         """更新遊戲邏輯"""
         if self.state == PLAYING:
             self.update_playing()
+
+        # 更新情緒價值系統計時器
+        if self.encouragement_timer > 0:
+            self.encouragement_timer -= 1
+            if self.encouragement_timer <= 0:
+                self.encouragement_messages.clear()
+
+        if self.congratulation_timer > 0:
+            self.congratulation_timer -= 1
+            if self.congratulation_timer <= 0:
+                self.congratulation_messages.clear()
+
+        if self.mega_celebration_timer > 0:
+            self.mega_celebration_timer -= 1
+            if self.mega_celebration_timer <= 0:
+                self.mega_celebration = False
 
     def draw_menu(self):
         """繪製主選單"""
@@ -1169,7 +1581,7 @@ class Game:
         # 關卡選項
         start_x = 50
         start_y = 180
-        cols = 6  # 改為6列以容納11關
+        cols = 6  # 改為6列以容納12關
         rows = 2
 
         for level in range(1, TOTAL_LEVELS + 1):
@@ -1204,6 +1616,21 @@ class Game:
                     text_color = WHITE
                     deaths = self.level_stats.get(str(level), {}).get("deaths", 0)
                     status = f"挑戰\n{deaths}死"
+            elif level == 12:
+                # 第12關無限之塔特殊顯示
+                if (
+                    str(level) in self.level_stats
+                    and self.level_stats[str(level)]["completed"]
+                ):
+                    color = (255, 215, 0)  # 完成的第12關用金色
+                    text_color = BLACK
+                    deaths = self.level_stats[str(level)]["best_deaths"]
+                    status = f"神級\n{deaths}死"
+                else:
+                    color = (184, 134, 11)  # 未完成的第12關用深金色
+                    text_color = WHITE
+                    deaths = self.level_stats.get(str(level), {}).get("deaths", 0)
+                    status = f"無限\n{deaths}死"
             elif (
                 str(level) in self.level_stats
                 and self.level_stats[str(level)]["completed"]
@@ -1294,6 +1721,24 @@ class Game:
                     )
                     warning_rect = warning.get_rect(center=(warning_x, warning_y))
                     self.screen.blit(warning, warning_rect)
+
+                # 第12關特殊說明
+                if self.level_select_selection == 12:
+                    warning_text = "🚀 無限之塔：挑戰你的極限！"
+                    warning = self.font_small.render(warning_text, True, (255, 215, 0))
+                    warning_x, warning_y = self.scale_pos(
+                        SCREEN_WIDTH // 2, detail_y + 55
+                    )
+                    warning_rect = warning.get_rect(center=(warning_x, warning_y))
+                    self.screen.blit(warning, warning_rect)
+
+                    warning_text2 = "理論上可以無限攀爬..."
+                    warning2 = self.font_small.render(warning_text2, True, PURPLE)
+                    warning2_x, warning2_y = self.scale_pos(
+                        SCREEN_WIDTH // 2, detail_y + 75
+                    )
+                    warning2_rect = warning2.get_rect(center=(warning2_x, warning2_y))
+                    self.screen.blit(warning2, warning2_rect)
 
         # 操作說明
         controls = ["← → 選擇關卡", "Enter 開始", "ESC 返回", "F11 切換全屏"]
@@ -1420,6 +1865,9 @@ class Game:
 
         # 繪製UI
         self.draw_playing_ui_content(screen, level_data)
+
+        # 繪製情緒價值訊息
+        self.draw_emotional_messages(screen)
 
     def draw_player_content(self, screen, camera_y):
         """繪製玩家（不縮放版本，用於虛擬畫布）"""
@@ -1651,6 +2099,102 @@ class Game:
             text = self.font_small.render(charge_text, True, YELLOW)
             screen.blit(text, (SCREEN_WIDTH - 150, 60))
 
+    def draw_emotional_messages(self, screen):
+        """繪製情緒價值訊息"""
+        import math
+
+        # 繪製鼓勵訊息（死亡時）
+        if self.encouragement_messages and self.encouragement_timer > 0:
+            y_offset = 250
+            for i, message in enumerate(
+                self.encouragement_messages[-3:]
+            ):  # 最多顯示3條
+                # 淡入淡出效果
+                alpha = min(255, int(255 * (self.encouragement_timer / 60)))
+
+                # 創建半透明背景
+                message_surface = pygame.Surface((len(message) * 12, 30))
+                message_surface.set_alpha(alpha // 2)
+                message_surface.fill((0, 0, 0))
+                screen.blit(
+                    message_surface,
+                    (SCREEN_WIDTH // 2 - len(message) * 6, y_offset + i * 35),
+                )
+
+                # 繪製文字
+                text = self.font_medium.render(message, True, (255, 255, 0, alpha))
+                text_rect = text.get_rect(
+                    center=(SCREEN_WIDTH // 2, y_offset + i * 35 + 15)
+                )
+                screen.blit(text, text_rect)
+
+        # 繪製完成關卡慶祝訊息
+        if self.congratulation_messages and self.congratulation_timer > 0:
+            y_offset = 200
+            for i, message in enumerate(self.congratulation_messages):
+                # 彩虹效果
+                time_factor = (300 - self.congratulation_timer) / 300.0
+                hue = (time_factor * 360 + i * 60) % 360
+                import colorsys
+
+                rgb = colorsys.hsv_to_rgb(hue / 360.0, 1.0, 1.0)
+                color = (int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+
+                # 跳動效果
+                bounce = abs(math.sin(time_factor * 10 + i)) * 10
+
+                # 創建半透明背景
+                bg_width = len(message) * 12
+                message_surface = pygame.Surface((bg_width, 35))
+                message_surface.set_alpha(150)
+                message_surface.fill((0, 0, 0))
+                screen.blit(
+                    message_surface,
+                    (SCREEN_WIDTH // 2 - bg_width // 2, y_offset + i * 40 - bounce),
+                )
+
+                # 繪製慶祝文字
+                text = self.font_medium.render(message, True, color)
+                text_rect = text.get_rect(
+                    center=(SCREEN_WIDTH // 2, y_offset + i * 40 + 15 - bounce)
+                )
+                screen.blit(text, text_rect)
+
+        # 超級慶祝效果（完成最終關卡）
+        if self.mega_celebration and self.mega_celebration_timer > 0:
+            # 全螢幕閃爍效果
+            flash_alpha = int(50 * abs(math.sin(self.mega_celebration_timer * 0.2)))
+            flash_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            flash_surface.set_alpha(flash_alpha)
+
+            # 彩虹閃爍
+            time_factor = self.mega_celebration_timer / 100.0
+            hue = (time_factor * 720) % 360
+            import colorsys
+
+            rgb = colorsys.hsv_to_rgb(hue / 360.0, 0.5, 1.0)
+            flash_color = (int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+            flash_surface.fill(flash_color)
+            screen.blit(flash_surface, (0, 0))
+
+            # 大字慶祝文字
+            if self.mega_celebration_timer > 450:  # 前7.5秒
+                mega_text = "🎆 傳奇誕生！🎆"
+                text = self.font_large.render(mega_text, True, (255, 255, 255))
+                text_rect = text.get_rect(
+                    center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+                )
+
+                # 文字發光效果
+                for offset in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
+                    glow_text = self.font_large.render(mega_text, True, flash_color)
+                    glow_rect = text_rect.copy()
+                    glow_rect.x += offset[0]
+                    glow_rect.y += offset[1]
+                    screen.blit(glow_text, glow_rect)
+
+                screen.blit(text, text_rect)
+
     def draw_victory(self):
         """繪製勝利畫面"""
         if self.fullscreen:
@@ -1664,10 +2208,30 @@ class Game:
 
     def draw_victory_content(self, screen):
         """繪製勝利畫面內容"""
-        screen.fill(DARK_BLUE)
+        # 特殊背景效果
+        if self.current_level == 12 or self.current_level == TOTAL_LEVELS:
+            # 為最終關卡添加特殊背景
+            import math
+            import time
+
+            for i in range(0, SCREEN_WIDTH, 20):
+                for j in range(0, SCREEN_HEIGHT, 20):
+                    hue = (i + j + time.time() * 100) % 360
+                    import colorsys
+
+                    rgb = colorsys.hsv_to_rgb(hue / 360.0, 0.3, 0.6)
+                    color = (int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+                    pygame.draw.rect(screen, color, (i, j, 20, 20))
+        else:
+            screen.fill(DARK_BLUE)
 
         # 勝利訊息
-        title = self.font_large.render("恭喜過關！", True, YELLOW)
+        if self.current_level == 12:
+            title = self.font_large.render("🏆 無限征服者！🏆", True, (255, 215, 0))
+        elif self.current_level == TOTAL_LEVELS:
+            title = self.font_large.render("👑 跳躍之神！👑", True, (255, 215, 0))
+        else:
+            title = self.font_large.render("恭喜過關！", True, YELLOW)
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
         screen.blit(title, title_rect)
 
@@ -1694,9 +2258,25 @@ class Game:
             screen.blit(text, text_rect)
 
             if deaths <= target:
-                perfect_text = "挑戰成功！"
-                text = self.font_medium.render(perfect_text, True, GREEN)
+                if self.current_level == 12:
+                    perfect_text = "🌟 史詩級成就達成！🌟"
+                    text = self.font_medium.render(perfect_text, True, (255, 215, 0))
+                else:
+                    perfect_text = "挑戰成功！"
+                    text = self.font_medium.render(perfect_text, True, GREEN)
                 text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 400))
+                screen.blit(text, text_rect)
+
+        # 特殊成就顯示
+        if self.current_level == 12:
+            achievement_texts = [
+                "✨ 你征服了無限！",
+                "🚀 突破了所有極限！",
+                "💎 創造了不可能的奇蹟！",
+            ]
+            for i, achievement in enumerate(achievement_texts):
+                text = self.font_small.render(achievement, True, (255, 215, 0))
+                text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 440 + i * 25))
                 screen.blit(text, text_rect)
 
         # 操作說明
@@ -1706,18 +2286,18 @@ class Game:
             continue_text = "你已完成所有關卡！"
 
         text = self.font_small.render(continue_text, True, WHITE)
-        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 480))
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 520))
         screen.blit(text, text_rect)
 
         back_text = "ESC 返回主選單"
         text = self.font_small.render(back_text, True, WHITE)
-        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 510))
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 550))
         screen.blit(text, text_rect)
 
         # F11全屏快捷鍵說明
         fullscreen_text = "F11 切換全屏"
         text = self.font_small.render(fullscreen_text, True, GRAY)
-        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 540))
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, 580))
         screen.blit(text, text_rect)
 
     def draw(self):
