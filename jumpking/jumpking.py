@@ -60,6 +60,11 @@ class Player:
         self.start_y = y
         self.death_count = 0
         self.game = game  # 對遊戲實例的引用，用於播放音效
+        
+        # 跳躍力量循環系統
+        self.jump_power_paused = False  # 是否處於暫停狀態
+        self.jump_power_pause_timer = 0  # 暫停計時器
+        self.jump_power_pause_duration = 30  # 暫停幀數（約0.5秒，假設60FPS）
 
     def reset_position(self):
         """重置玩家位置到關卡起點"""
@@ -71,6 +76,10 @@ class Player:
         self.jump_charging = False
         self.jump_power = 0
         self.death_count += 1
+        
+        # 重置跳躍力量循環系統
+        self.jump_power_paused = False
+        self.jump_power_pause_timer = 0
 
     def set_start_position(self, x, y):
         """設置新的起點位置"""
@@ -229,13 +238,28 @@ class Player:
         # 移除 on_ground 檢查，允許任何時候開始蓄力（但執行時仍需檢查）
         self.jump_charging = True
         self.jump_power = MIN_JUMP_POWER
+        # 重置暫停狀態
+        self.jump_power_paused = False
+        self.jump_power_pause_timer = 0
 
     def update_jump_charge(self):
-        # 只要在蓄力就持續增加力量
+        # 只要在蓄力就持續處理力量變化
         if self.jump_charging:
-            self.jump_power += JUMP_CHARGE_RATE
-            if self.jump_power > MAX_JUMP_POWER:
-                self.jump_power = MAX_JUMP_POWER
+            if self.jump_power_paused:
+                # 處於暫停狀態，計時器遞減
+                self.jump_power_pause_timer -= 1
+                if self.jump_power_pause_timer <= 0:
+                    # 暫停結束，重新開始充能
+                    self.jump_power_paused = False
+                    self.jump_power = MIN_JUMP_POWER
+            else:
+                # 正常充能狀態
+                self.jump_power += JUMP_CHARGE_RATE
+                if self.jump_power >= MAX_JUMP_POWER:
+                    # 達到最大值，進入暫停狀態
+                    self.jump_power = MAX_JUMP_POWER
+                    self.jump_power_paused = True
+                    self.jump_power_pause_timer = self.jump_power_pause_duration
 
     def execute_jump(self, direction):
         # 只有在地面上且蓄力時才能跳躍
@@ -267,22 +291,36 @@ class Player:
             self.jump_charging = False
             self.jump_power = 0
             self.on_ground = False
+            # 重置暫停狀態
+            self.jump_power_paused = False
+            self.jump_power_pause_timer = 0
         else:
             # 即使無法跳躍也要重置蓄力狀態
             if self.jump_charging:
                 self.jump_charging = False
                 self.jump_power = 0
+                # 重置暫停狀態
+                self.jump_power_paused = False
+                self.jump_power_pause_timer = 0
 
     def draw(self, screen, camera_y):
         # 繪製玩家
         player_color = BLUE
         if self.jump_charging:
-            # 蓄力時顯示不同顏色
-            charge_ratio = (self.jump_power - MIN_JUMP_POWER) / (
-                MAX_JUMP_POWER - MIN_JUMP_POWER
-            )
-            red_component = min(255, int(100 + charge_ratio * 155))
-            player_color = (red_component, 100, 237)
+            if self.jump_power_paused:
+                # 暫停狀態：閃爍效果
+                flash_intensity = int(self.jump_power_pause_timer / 3) % 2
+                if flash_intensity:
+                    player_color = (255, 100, 100)  # 紅色閃爍
+                else:
+                    player_color = (255, 200, 100)  # 橙色閃爍
+            else:
+                # 正常蓄力時顯示不同顏色
+                charge_ratio = (self.jump_power - MIN_JUMP_POWER) / (
+                    MAX_JUMP_POWER - MIN_JUMP_POWER
+                )
+                red_component = min(255, int(100 + charge_ratio * 155))
+                player_color = (red_component, 100, 237)
 
         pygame.draw.rect(
             screen, player_color, (self.x, self.y - camera_y, self.width, self.height)
@@ -295,9 +333,6 @@ class Player:
 
         # 繪製蓄力指示器
         if self.jump_charging:
-            charge_ratio = (self.jump_power - MIN_JUMP_POWER) / (
-                MAX_JUMP_POWER - MIN_JUMP_POWER
-            )
             bar_width = 40
             bar_height = 8
             bar_x = self.x - 5
@@ -305,10 +340,20 @@ class Player:
 
             # 背景
             pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
-            # 蓄力條
-            pygame.draw.rect(
-                screen, RED, (bar_x, bar_y, bar_width * charge_ratio, bar_height)
-            )
+            
+            if self.jump_power_paused:
+                # 暫停狀態：顯示滿條並閃爍
+                flash_intensity = int(self.jump_power_pause_timer / 3) % 2
+                bar_color = (255, 255, 0) if flash_intensity else (255, 100, 0)  # 黃色/橙色閃爍
+                pygame.draw.rect(screen, bar_color, (bar_x, bar_y, bar_width, bar_height))
+            else:
+                # 正常蓄力狀態
+                charge_ratio = (self.jump_power - MIN_JUMP_POWER) / (
+                    MAX_JUMP_POWER - MIN_JUMP_POWER
+                )
+                pygame.draw.rect(
+                    screen, RED, (bar_x, bar_y, bar_width * charge_ratio, bar_height)
+                )
 
 
 class LevelManager:
